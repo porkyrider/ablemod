@@ -589,3 +589,90 @@ fn test_amiga_panning_light_is_quarter_separation() {
     let values = pan_baseline_values(AmigaPanning::Light);
     assert_eq!(values, vec![-0.25, 0.25, -0.25]);
 }
+
+fn module_with_looped_sample(loop_start: u32, loop_length: u32, total_frames: u32) -> Module {
+    // a distinctive ramp waveform so the "loop segment repeated" content is easy to eyeball
+    // if this ever needs debugging, rather than uniform silence.
+    let mut pcm16 = Vec::with_capacity(total_frames as usize * 2);
+    for i in 0..total_frames {
+        let sample = (i % 100) as i16 * 300;
+        pcm16.extend_from_slice(&sample.to_le_bytes());
+    }
+    let sample = Sample {
+        index: 1, name: "loopy".to_string(), pcm16, sample_rate_hz: 8363,
+        loop_start, loop_length, volume: 64, finetune: 0, base_note: 60,
+    };
+    let note_on = Cell { sample_index: Some(1), midi_note: Some(60), volume: Some(64), ..Default::default() };
+    Module {
+        title: "t".to_string(), source_format: "protracker".to_string(), num_channels: 1, samples: vec![sample],
+        patterns: vec![Pattern { rows: vec![vec![note_on]] }], order: vec![0], restart_position: 0,
+        initial_tempo_bpm: 125, initial_speed_ticks: 6,
+    }
+}
+
+fn exported_sample_part_info(module: &Module) -> (u32, u32, u32, u32) {
+    // (sample_end, sustain_loop_start, sustain_loop_end, wav_frame_count)
+    let dir = tempfile::tempdir().unwrap();
+    let output = dir.path().join("out.als");
+    export_als(module, &output, default_template_bytes(), AmigaPanning::None).unwrap();
+
+    let root = read_als(&output);
+    let part = xmlutil::find(&root, ".//MultiSamplePart").unwrap();
+    let sample_end: u32 = attr(xmlutil::find(part, "./SampleEnd").unwrap(), "Value").parse().unwrap();
+    let loop_start: u32 = attr(xmlutil::find(part, "./SustainLoop/Start").unwrap(), "Value").parse().unwrap();
+    let loop_end: u32 = attr(xmlutil::find(part, "./SustainLoop/End").unwrap(), "Value").parse().unwrap();
+
+    let wav_path = dir.path().join("Samples").join("Imported").join("01_loopy.wav");
+    let reader = hound::WavReader::open(&wav_path).unwrap();
+    let frame_count = reader.duration();
+
+    (sample_end, loop_start, loop_end, frame_count)
+}
+
+#[test]
+fn test_short_loop_gets_repeated_until_the_sampler_can_loop_it() {
+    // 32-frame loop (PFANTAS1.MOD instrument 10's exact loop length) — below Ableton
+    // Sampler's undocumented 48-frame minimum, so it must be repeated to at least 48 frames
+    // (here: 2x32 = 64) before the loop points are written.
+    let module = module_with_looped_sample(100, 32, 132);
+    let (sample_end, loop_start, loop_end, frame_count) = exported_sample_part_info(&module);
+
+    let new_loop_length = loop_end - loop_start + 1;
+    assert!(new_loop_length >= 48, "loop is still below Ableton's minimum: {new_loop_length}");
+    assert_eq!(new_loop_length, 64); // ceil(48/32) = 2 repeats of the original 32-frame loop
+    assert_eq!(loop_start, 100); // the attack portion before the loop is untouched
+    assert_eq!(sample_end, frame_count - 1);
+    assert_eq!(frame_count, 100 + 64); // attack (100) + repeated loop (64), original tail dropped
+}
+
+#[test]
+fn test_loop_already_at_the_minimum_is_left_untouched() {
+    let module = module_with_looped_sample(50, 48, 98);
+    let (sample_end, loop_start, loop_end, frame_count) = exported_sample_part_info(&module);
+
+    assert_eq!(loop_start, 50);
+    assert_eq!(loop_end - loop_start + 1, 48);
+    assert_eq!(frame_count, 98);
+    assert_eq!(sample_end, 97);
+}
+
+#[test]
+fn test_loop_well_above_the_minimum_is_left_untouched() {
+    let module = module_with_looped_sample(48, 2126, 2174); // PFANTAS1.MOD instrument 8's exact loop
+    let (sample_end, loop_start, loop_end, frame_count) = exported_sample_part_info(&module);
+
+    assert_eq!(loop_start, 48);
+    assert_eq!(loop_end, 2173);
+    assert_eq!(frame_count, 2174);
+    assert_eq!(sample_end, 2173);
+}
+
+#[test]
+fn test_non_looped_sample_is_never_extended() {
+    let mut module = module_with_looped_sample(0, 0, 100);
+    module.samples[0].loop_length = 0; // no loop at all
+    let (sample_end, _loop_start, _loop_end, frame_count) = exported_sample_part_info(&module);
+
+    assert_eq!(frame_count, 100);
+    assert_eq!(sample_end, 99);
+}

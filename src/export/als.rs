@@ -79,10 +79,40 @@ const TRACK_FADER_MIN_DB: f64 = -70.0; // matches Mixer/Volume's own MidiControl
 const TRACK_FADER_MAX_DB: f64 = 6.0; // matches Mixer/Volume's own MidiControllerRange ceiling (~1.995 linear)
 pub const TRACK_VOLUME_DB: f64 = -12.0; // headroom baseline for every generated track, so simultaneous notes don't sum above 0dB
 const TEMPO_STEP_EPSILON_BEATS: f64 = 0.001; // forces a step instead of a ramp between tempo automation points
+// Ableton's Sampler device silently refuses to loop a region shorter than this many frames —
+// confirmed against a real short-loop sample (PFANTAS1.MOD instrument 10, a 32-frame loop)
+// that played back as a one-shot with no looping in Ableton despite SustainLoop/Mode being
+// set correctly.
+const MIN_SAMPLER_LOOP_FRAMES: u32 = 48;
 
 /// The .als bundled with ablemod itself, used when the caller doesn't supply one.
 pub fn default_template_bytes() -> &'static [u8] {
     include_bytes!("../../templates/default.als")
+}
+
+/// If `sample` loops but the loop is shorter than Ableton's Sampler can actually loop
+/// (MIN_SAMPLER_LOOP_FRAMES), physically repeats the loop's own audio enough times to reach
+/// that minimum and returns a new Sample with the extended PCM data and loop length —
+/// otherwise returns `sample` unchanged. Repeating whole cycles of the loop keeps the result
+/// audibly identical to what real tracker playback would have produced by looping the short
+/// segment that many times; anything past the original loop end is dropped, since it's
+/// unreachable once a real player enters the loop anyway.
+fn ensure_loopable(sample: &Sample) -> std::borrow::Cow<'_, Sample> {
+    if !sample.has_loop() || sample.loop_length >= MIN_SAMPLER_LOOP_FRAMES {
+        return std::borrow::Cow::Borrowed(sample);
+    }
+
+    let repeats = MIN_SAMPLER_LOOP_FRAMES.div_ceil(sample.loop_length);
+    let loop_start_bytes = (sample.loop_start * 2) as usize;
+    let loop_length_bytes = (sample.loop_length * 2) as usize;
+    let loop_segment = sample.pcm16[loop_start_bytes..loop_start_bytes + loop_length_bytes].to_vec();
+
+    let mut pcm16 = sample.pcm16[..loop_start_bytes].to_vec(); // attack portion, unchanged
+    for _ in 0..repeats {
+        pcm16.extend_from_slice(&loop_segment);
+    }
+
+    std::borrow::Cow::Owned(Sample { pcm16, loop_length: sample.loop_length * repeats, ..sample.clone() })
 }
 
 fn volume_to_db(tracker_volume: i32) -> f64 {
@@ -799,6 +829,8 @@ pub fn export_als(
     let mut id_counter = IdCounter(max_id(&root) + 1);
     let mut new_tracks: Vec<Element> = Vec::new();
     for sample in &non_empty_samples {
+        let sample = ensure_loopable(sample);
+        let sample = sample.as_ref();
         let wav_path = samples_dir.join(sample_wav_filename(sample));
         write_sample_wav(sample, &wav_path).map_err(|e| format!("failed to write {}: {e}", wav_path.display()))?;
 
