@@ -1,0 +1,25 @@
+/target
+
+# macOS
+.DS_Store
+Icon?
+
+# Claude Code local session data
+.claude/
+
+# scratch/manual-testing artifacts dropped at the repo root (not part of the project) —
+# tests/fixtures/ has the .mod copies the test suite actually depends on
+/*.mod
+/*.MOD
+/*.xm
+/*.s3m
+/*.als
+/*.zip
+/toto
+/Samples/
+
+# generated Ableton projects (regenerate via `ablemod convert`, not source)
+/PFANTAS1 Project/
+/4aces-high Project/
+/PINBALLF Project/
+/pdreams/
