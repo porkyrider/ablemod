@@ -81,7 +81,12 @@ fn print_effect_table(counts: &std::collections::BTreeMap<u32, u32>) {
     let mut items: Vec<(u32, u32)> = counts.iter().map(|(&k, &v)| (k, v)).collect();
     items.sort_by(|a, b| b.1.cmp(&a.1));
     for (code, count) in items {
-        println!("  {:X}xx  {:<32} {} occurrence(s)", code, effect_name(code), count);
+        // Exx sub-commands use a synthetic 0xE0..=0xEF code (see
+        // protracker::extended_subcommand_counts) — displayed as "E1x" (2 hex digits + one
+        // placeholder), matching how modules/trackers document these, not "1xx" like every
+        // other top-level code.
+        let label = if (0xE0..=0xEF).contains(&code) { format!("E{:X}x", code & 0x0F) } else { format!("{code:X}xx") };
+        println!("  {label:<5} {:<32} {} occurrence(s)", effect_name(code), count);
     }
 }
 
@@ -236,12 +241,16 @@ fn convert_cmd(
     println!("wrote {}", output_path.display());
     println!("wrote samples to {}", output_path.parent().unwrap_or_else(|| std::path::Path::new(".")).join("Samples").join("Imported").display());
     if verbose {
-        let non_empty_samples = module.samples.iter().filter(|s| !s.is_empty()).count();
         let song = compute_song_events(&module);
+        // A sample triggered on several overlapping tracker channels gets more than one
+        // voice/track (see the voice-assignment pass in export::notes::compute_song_events) —
+        // count those too, so this matches the number of tracks export_als actually wrote.
+        let track_count: usize =
+            song.notes_by_sample.values().map(|notes| notes.iter().map(|n| n.voice + 1).max().unwrap_or(1)).sum();
         let total_notes: usize = song.notes_by_sample.values().map(|v| v.len()).sum();
         println!(
             "Verbose: {} track(s), {} note(s), {} tempo change(s), {:.2} beats total",
-            non_empty_samples,
+            track_count,
             total_notes,
             song.tempo_changes.len(),
             song.total_beats

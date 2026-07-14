@@ -17,8 +17,31 @@ const BASE_MIDI_NOTE: i32 = 60; // MIDI note assigned to period 428 ("C-2"), i.e
 
 /// Human-readable names for every standard ProTracker effect code, used for --verbose
 /// CLI output. Codes not in IMPLEMENTED_EFFECTS are parsed into the IR but silently
-/// ignored by playback simulation (see export::notes / formats::playback).
+/// ignored by playback simulation (see export::notes / formats::playback). Extended
+/// Effects (Exx) sub-commands use a synthetic code in 0xE0..=0xEF (0xE0 | sub-command
+/// nibble) — see extended_subcommand_counts — since 0xE itself is a mix of implemented
+/// and unimplemented sub-commands, not a single yes/no like every other top-level code.
 pub fn effect_name(code: u32) -> &'static str {
+    if (0xE0..=0xEF).contains(&code) {
+        return match code & 0x0F {
+            0x0 => "Set Filter (Exx, unused on Amiga)",
+            0x1 => "Fine Portamento Up (Exx)",
+            0x2 => "Fine Portamento Down (Exx)",
+            0x3 => "Glissando Control (Exx)",
+            0x4 => "Set Vibrato Waveform (Exx)",
+            0x5 => "Set Finetune (Exx)",
+            0x6 => "Pattern Loop (Exx)",
+            0x7 => "Set Tremolo Waveform (Exx)",
+            0x8 => "unused (Exx)",
+            0x9 => "Retrigger Note (Exx)",
+            0xA => "Fine Volume Slide Up (Exx)",
+            0xB => "Fine Volume Slide Down (Exx)",
+            0xC => "Note Cut (Exx)",
+            0xD => "Note Delay (Exx)",
+            0xE => "Pattern Delay (Exx)",
+            _ => "unused (Exx)",
+        };
+    }
     match code {
         0x0 => "Arpeggio",
         0x1 => "Portamento Up",
@@ -40,30 +63,65 @@ pub fn effect_name(code: u32) -> &'static str {
     }
 }
 
-pub const IMPLEMENTED_EFFECTS: &[u32] = &[0x0, 0x1, 0x2, 0x3, 0x4, 0x6, 0x8, 0xA, 0xB, 0xC, 0xD, 0xF];
+pub const IMPLEMENTED_EFFECTS: &[u32] = &[0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xA, 0xB, 0xC, 0xD, 0xF];
+
+// Which Exx sub-command nibbles export::notes::compute_song_events actually simulates —
+// see the EXTENDED branch there. E0/E3/E4/E5/E6/E7/E8/EE/EF are parsed but ignored.
+const IMPLEMENTED_E_SUBCOMMANDS: &[u32] = &[0x1, 0x2, 0x9, 0xA, 0xB, 0xC, 0xD];
 
 fn is_implemented(code: u32) -> bool {
     IMPLEMENTED_EFFECTS.contains(&code)
 }
 
+/// Exx occurrences broken down by sub-command (the high nibble of the effect param), keyed
+/// by the same synthetic 0xE0..=0xEF code effect_name/print_effect_table expect — `0xE`
+/// itself never appears as a key here or in unimplemented_effect_counts/
+/// implemented_effect_counts, since "is Exx implemented" isn't a single yes/no.
+fn extended_subcommand_counts(module: &Module) -> BTreeMap<u32, u32> {
+    let mut counts = BTreeMap::new();
+    for pattern in &module.patterns {
+        for row in &pattern.rows {
+            for cell in row {
+                if cell.effect == Some(0xE) {
+                    let sub_command = (cell.effect_param.unwrap_or(0) >> 4) & 0x0F;
+                    *counts.entry(0xE0 | sub_command).or_insert(0) += 1;
+                }
+            }
+        }
+    }
+    counts
+}
+
 /// Effect codes present in the module that ablemod parses but doesn't interpret
 /// during playback simulation (i.e. silently ignored by extract-midi/convert).
 pub fn unimplemented_effect_counts(module: &Module) -> BTreeMap<u32, u32> {
-    module
+    let mut result: BTreeMap<u32, u32> = module
         .effect_counts()
         .into_iter()
-        .filter(|(code, _)| !is_implemented(*code))
-        .collect()
+        .filter(|(code, _)| *code != 0xE && !is_implemented(*code))
+        .collect();
+    for (code, count) in extended_subcommand_counts(module) {
+        if !IMPLEMENTED_E_SUBCOMMANDS.contains(&(code & 0x0F)) {
+            result.insert(code, count);
+        }
+    }
+    result
 }
 
 /// Effect codes present in the module that ablemod does simulate during playback
 /// (the counterpart to unimplemented_effect_counts, for --verbose CLI reporting).
 pub fn implemented_effect_counts(module: &Module) -> BTreeMap<u32, u32> {
-    module
+    let mut result: BTreeMap<u32, u32> = module
         .effect_counts()
         .into_iter()
-        .filter(|(code, _)| is_implemented(*code))
-        .collect()
+        .filter(|(code, _)| *code != 0xE && is_implemented(*code))
+        .collect();
+    for (code, count) in extended_subcommand_counts(module) {
+        if IMPLEMENTED_E_SUBCOMMANDS.contains(&(code & 0x0F)) {
+            result.insert(code, count);
+        }
+    }
+    result
 }
 
 fn detect_channels(tag: &[u8]) -> Option<usize> {

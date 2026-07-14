@@ -1,5 +1,6 @@
 //! Convert a Module's simulated note events (see `export::notes`) into a
-//! Standard MIDI File, one track per sample.
+//! Standard MIDI File, one track per sample (or, when a sample plays on several
+//! overlapping tracker channels, one track per voice — see `NoteEvent::voice`).
 
 use std::path::Path;
 
@@ -54,13 +55,22 @@ pub fn write_midi(module: &Module, path: &Path) -> std::io::Result<()> {
     midi_file.tracks.push(conductor);
 
     for sample in &non_empty_samples {
-        let mut track = Track::default();
-        track.track_name(format!("{:02} {}", sample.index, sample.name).trim());
+        let notes = song.notes_by_sample.get(&sample.index).cloned().unwrap_or_default();
+        // A sample triggered on multiple tracker channels with overlapping timing needs more
+        // than one MIDI track — a single track can't hold two simultaneous notes on the same
+        // pitch without note_on/note_off pairing becoming ambiguous. See the voice-assignment
+        // pass in export::notes::compute_song_events.
+        let voice_count = notes.iter().map(|n| n.voice + 1).max().unwrap_or(1);
+        for voice in 0..voice_count {
+            let mut track = Track::default();
+            let base_name = format!("{:02} {}", sample.index, sample.name).trim().to_string();
+            let track_display_name =
+                if voice > 0 { format!("{base_name} ({})", voice + 1) } else { base_name }; // first voice keeps the plain name
+            track.track_name(&track_display_name);
 
-        pitch_bend_range_rpn(&mut track, 0, PITCH_BEND_RANGE_SEMITONES as u8);
+            pitch_bend_range_rpn(&mut track, 0, PITCH_BEND_RANGE_SEMITONES as u8);
 
-        if let Some(notes) = song.notes_by_sample.get(&sample.index) {
-            for note in notes {
+            for note in notes.iter().filter(|n| n.voice == voice) {
                 let start_tick = (note.start_beat * TICKS_PER_BEAT as f64).round() as u32;
                 let end_tick = ((note.start_beat + note.duration_beat) * TICKS_PER_BEAT as f64).round() as u32;
 
@@ -105,9 +115,9 @@ pub fn write_midi(module: &Module, path: &Path) -> std::io::Result<()> {
                     track.control_change(end_tick, 0, 11, 127);
                 }
             }
-        }
 
-        midi_file.tracks.push(track);
+            midi_file.tracks.push(track);
+        }
     }
 
     midi_file.save(path)

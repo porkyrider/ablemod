@@ -48,17 +48,18 @@ fn test_extract_samples_without_verbose_omits_sample_detail() {
 
 #[test]
 fn test_extract_midi_verbose_warns_about_unimplemented_effect() {
-    // effect 7 = Tremolo, not in IMPLEMENTED_EFFECTS
+    // E3x = Glissando Control, one of the few Exx sub-commands still unimplemented (see
+    // IMPLEMENTED_E_SUBCOMMANDS in formats::protracker)
     let dir = tempfile::tempdir().unwrap();
-    let mod_path = write_mod(dir.path(), Some((0x7, 0x28)));
+    let mod_path = write_mod(dir.path(), Some((0xE, 0x30)));
     let out_path = dir.path().join("out.mid");
 
     let (code, output) = run(&["extract-midi", mod_path.to_str().unwrap(), "-o", out_path.to_str().unwrap(), "--verbose"]);
 
     assert_eq!(code, 0, "{output}");
     assert!(output.contains("unimplemented effects found"));
-    assert!(output.contains("7xx"));
-    assert!(output.contains("Tremolo"));
+    assert!(output.contains("E3x"));
+    assert!(output.contains("Glissando Control"));
     assert!(output.contains("no implemented effects found in this module")); // only effect present is unimplemented
 }
 
@@ -94,15 +95,15 @@ fn test_extract_midi_without_verbose_omits_effect_warning() {
 #[test]
 fn test_convert_verbose_warns_about_unimplemented_effect() {
     let dir = tempfile::tempdir().unwrap();
-    let mod_path = write_mod(dir.path(), Some((0x9, 0x10))); // Sample Offset, unimplemented
+    let mod_path = write_mod(dir.path(), Some((0xE, 0x30))); // E3x = Glissando Control, unimplemented
     let out_path = dir.path().join("Project").join("out.als");
 
     let (code, output) = run(&["convert", mod_path.to_str().unwrap(), "-o", out_path.to_str().unwrap(), "--verbose"]);
 
     assert_eq!(code, 0, "{output}");
     assert!(output.contains("unimplemented effects found"));
-    assert!(output.contains("9xx"));
-    assert!(output.contains("Sample Offset"));
+    assert!(output.contains("E3x"));
+    assert!(output.contains("Glissando Control"));
     assert!(output.contains("track(s)"));
     assert!(output.contains("no implemented effects found in this module")); // only effect present is unimplemented
 }

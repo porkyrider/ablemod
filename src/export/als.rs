@@ -5,14 +5,21 @@
 //! The template must contain at least one MidiTrack hosting a Sampler
 //! (`MultiSampler`) device with a sample loaded, with its song content laid
 //! out as a single clip in the *Arrangement* (not a Session clip slot). That
-//! track is cloned once per non-empty sample in the module; each clone gets its
-//! own sample reference, root key, loop points, and one Arrangement clip per
-//! pattern *play* (see export::notes::Segment) that sample actually has notes in
-//! — matching the module's own pattern structure instead of one clip spanning
-//! the whole song. Each clip carries its own MIDI notes (grouped by pitch, as
-//! Ableton's clip format requires). A note whose sustain would naturally cross
-//! into the next pattern is truncated at the clip boundary, since Ableton can't
-//! play a note past its own clip's end.
+//! track is cloned once per non-empty sample in the module — or, when a sample
+//! is triggered on several tracker channels whose notes overlap in time, once
+//! per "voice" that sample needs (see the voice-assignment pass in
+//! export::notes::compute_song_events); a sample needing more than one voice
+//! has its tracks folded into a `GroupTrack` (see GROUP_TRACK_TEMPLATE_XML) so
+//! they still read as one instrument in the track list. Every voice track of a
+//! given sample shares one color (see color_index_for_sample), distinct from
+//! other samples'. Each clone gets its own sample reference, root key, loop
+//! points, and one Arrangement clip per pattern *play* (see
+//! export::notes::Segment) that this voice actually has notes in — matching the
+//! module's own pattern structure instead of one clip spanning the whole song.
+//! Each clip carries its own MIDI notes (grouped by pitch, as Ableton's clip
+//! format requires). A note whose sustain would naturally cross into the next
+//! pattern is truncated at the clip boundary, since Ableton can't play a note
+//! past its own clip's end.
 //!
 //! Pitch Bend/Volume/Panorama automation (from ProTracker Portamento, Tone
 //! Portamento, Vibrato, Arpeggio, Volume Slide, Set Volume, Set Panning) is built
@@ -79,6 +86,12 @@ const TRACK_FADER_MIN_DB: f64 = -70.0; // matches Mixer/Volume's own MidiControl
 const TRACK_FADER_MAX_DB: f64 = 6.0; // matches Mixer/Volume's own MidiControllerRange ceiling (~1.995 linear)
 pub const TRACK_VOLUME_DB: f64 = -12.0; // headroom baseline for every generated track, so simultaneous notes don't sum above 0dB
 const TEMPO_STEP_EPSILON_BEATS: f64 = 0.001; // forces a step instead of a ramp between tempo automation points
+// Live's standard track-color palette (confirmed against a real reference project — every
+// `<Color Value="N" />` seen there falls in this range) has 70 entries, index 0-69. Not every
+// index maps to a visually distinct hue (Live repeats some across the palette), but cycling
+// through them by sample index at least keeps a given sample's own voice tracks identically
+// colored and separates *different* samples' tracks in the common case.
+const COLOR_PALETTE_SIZE: i32 = 70;
 // Ableton's Sampler device silently refuses to loop a region shorter than this many frames —
 // confirmed against a real short-loop sample (PFANTAS1.MOD instrument 10, a 32-frame loop)
 // that played back as a one-shot with no looping in Ableton despite SustainLoop/Mode being
@@ -88,6 +101,18 @@ const MIN_SAMPLER_LOOP_FRAMES: u32 = 48;
 /// The .als bundled with ablemod itself, used when the caller doesn't supply one.
 pub fn default_template_bytes() -> &'static [u8] {
     include_bytes!("../../templates/default.als")
+}
+
+/// A standalone `<GroupTrack>` element, captured from a real Ableton Live 12 project (two
+/// MidiTracks folded into one group) rather than hand-written — this schema (Mixer routing,
+/// FreezeSequencer, modulation targets, ...) is undocumented and, like the rest of this
+/// exporter's template-based approach, not worth risking a guess at. Cloned once per sample
+/// that ends up needing more than one voice track (see the voice-assignment pass in
+/// export::notes::compute_song_events) to visually fold that sample's tracks together.
+const GROUP_TRACK_TEMPLATE_XML: &str = include_str!("../../templates/group_track.xml");
+
+fn color_index_for_sample(sample: &Sample) -> i32 {
+    (sample.index as i32 - 1).rem_euclid(COLOR_PALETTE_SIZE)
 }
 
 /// If `sample` loops but the loop is shorter than Ableton's Sampler can actually loop
@@ -184,17 +209,26 @@ impl IdCounter {
     }
 }
 
+/// Renumbers every global Id *inside* `track` — but not `track`'s own top-level Id, which
+/// every caller already assigns explicitly (from the same shared counter) right before
+/// calling this. Re-touching it here was harmless as long as nothing else referenced a
+/// track's own Id (true for a plain MidiTrack) — but a GroupTrack's Id *is* referenced
+/// (its member tracks' TrackGroupId points to it), so silently reassigning it out from under
+/// the caller after they've already captured/returned it breaks that reference.
 fn renumber_global_ids(track: &mut Element, id_counter: &mut IdCounter) {
     let mut id_map: HashMap<String, String> = HashMap::new();
-    xmlutil::visit_mut(track, &mut |node| {
-        if let Some(value) = node.attributes.get("Id").cloned() {
-            if is_all_digits(&value) && value.parse::<i64>().map(|v| v >= LOCAL_ID_THRESHOLD).unwrap_or(false) {
-                let new_value = id_counter.next().to_string();
-                id_map.insert(value, new_value.clone());
-                node.attributes.insert("Id".to_string(), new_value);
+    for child in &mut track.children {
+        let XMLNode::Element(child) = child else { continue };
+        xmlutil::visit_mut(child, &mut |node| {
+            if let Some(value) = node.attributes.get("Id").cloned() {
+                if is_all_digits(&value) && value.parse::<i64>().map(|v| v >= LOCAL_ID_THRESHOLD).unwrap_or(false) {
+                    let new_value = id_counter.next().to_string();
+                    id_map.insert(value, new_value.clone());
+                    node.attributes.insert("Id".to_string(), new_value);
+                }
             }
-        }
-    });
+        });
+    }
     xmlutil::visit_mut(track, &mut |node| {
         if node.name == "PointeeId" {
             if let Some(old_value) = node.attributes.get("Value").cloned() {
@@ -459,11 +493,15 @@ fn clip_note_to_segment(note: &NoteEvent, segment: &Segment) -> ClippedNote {
     ClippedNote { start_beat: note.start_beat, duration_beat: duration, velocity: note.velocity, pitch: note.pitch }
 }
 
-fn build_clip(clip_template: &Element, display_name: &str, segment: &Segment, local_notes: &[ClippedNote], seg_index: usize) -> Element {
+fn build_clip(
+    clip_template: &Element, display_name: &str, segment: &Segment, local_notes: &[ClippedNote], seg_index: usize,
+    color_index: i32,
+) -> Element {
     let mut clip = clip_template.clone();
     clip.attributes.insert("Id".to_string(), seg_index.to_string());
     clip.attributes.insert("Time".to_string(), fmt_number(segment.start_beat));
     xmlutil::set_value(&mut clip, "./Name", display_name);
+    xmlutil::set_value(&mut clip, "./Color", &color_index.to_string()); // matches this sample's own track color
     // CurrentStart/CurrentEnd and the Loop bracket are in *absolute* arrangement time
     // (matching the Time attribute above) — only the notes/envelopes inside a clip are
     // clip-relative. Leaving these at the template's default (always 0..length) would place
@@ -526,15 +564,42 @@ fn build_clip(clip_template: &Element, display_name: &str, segment: &Segment, lo
 
 fn build_track(
     template_track: &Element, sample: &Sample, id_counter: &mut IdCounter, wav_path: &Path, events: &[NoteEvent],
-    segments: &[Segment], amiga_panning: AmigaPanning,
+    segments: &[Segment], amiga_panning: AmigaPanning, voice_label: Option<usize>,
 ) -> Element {
     let mut track = template_track.clone();
     let track_id = id_counter.next().to_string();
     track.attributes.insert("Id".to_string(), track_id);
     renumber_global_ids(&mut track, id_counter);
 
-    let display_name = format!("{:02} {}", sample.index, sample.name).trim().to_string();
+    xmlutil::set_value(&mut track, "./TrackUnfolded", "false"); // folded/minimized by default
+
+    // The template track carries whatever Arm state its own project happened to be saved
+    // with (ours has it armed, since that's a common state to leave a track in while
+    // building/testing) — cloning it as-is would arm *every* exported track at once. Force it
+    // off here; export_als re-arms exactly the first track of the whole project afterwards.
+    xmlutil::set_value(&mut track, "./DeviceChain/MainSequencer/Recorder/IsArmed", "false");
+
+    let mut display_name = format!("{:02} {}", sample.index, sample.name).trim().to_string();
+    // Same sample triggered on several tracker channels with overlapping timing: this
+    // voice's notes got split onto their own track (see the voice-assignment pass in
+    // export::notes) to avoid colliding with the sample's other voice(s) — label it so the
+    // duplicate tracks read as intentional rather than a bug.
+    if let Some(voice_number) = voice_label {
+        display_name = format!("{display_name} ({voice_number})");
+    }
     xmlutil::set_value(&mut track, "./Name/EffectiveName", &display_name);
+    // EffectiveName alone is just a cached, freely-regenerable display value — confirmed by
+    // opening a generated project in real Ableton Live and re-saving it untouched: every track
+    // we hadn't also set UserName on came back with its name mangled (Live prepended its own
+    // track-position number, e.g. "01 bsnare" became "2-01 bsnare"). A real user-driven rename
+    // in the Live UI writes the *same* text to both fields — UserName is what marks a name as
+    // deliberately set rather than auto-computed, so set it here too to make ours stick.
+    xmlutil::set_value(&mut track, "./Name/UserName", &display_name);
+
+    // One color per *sample*, shared by all of its voice tracks — makes a sample's tracks
+    // (whether split by voice or, once grouped, folded into one group) visually identifiable
+    // at a glance instead of all inheriting the template's own single color.
+    xmlutil::set_value(&mut track, "./Color", &color_index_for_sample(sample).to_string());
 
     {
         let sampler = xmlutil::find_mut(&mut track, ".//MultiSampler").expect("expected element \".//MultiSampler\" not found in template track");
@@ -619,10 +684,17 @@ fn build_track(
     let loop_start = if sample.has_loop() { sample.loop_start } else { 0 };
     let loop_end = if sample.has_loop() { sample.loop_start + sample.loop_length - 1 } else { last_frame as u32 };
 
+    // Sample Offset (9xx): every note sharing this voice necessarily has the same
+    // sample_offset_frames (see the voice-assignment pass in export::notes — notes needing a
+    // different offset can never share a voice), so the whole voice's track can use a single
+    // SampleStart. Loop points stay at their normal absolute positions — real tracker hardware
+    // only moves the *start* of playback, not the loop region itself.
+    let sample_start_frames = events.first().map(|n| n.sample_offset_frames).unwrap_or(0);
+
     {
         let sample_part = xmlutil::find_mut(&mut track, ".//MultiSamplePart").expect("expected element \".//MultiSamplePart\" not found in template track");
         xmlutil::set_value(sample_part, "./RootKey", &sample.base_note.to_string());
-        xmlutil::set_value(sample_part, "./SampleStart", "0");
+        xmlutil::set_value(sample_part, "./SampleStart", &sample_start_frames.to_string());
         xmlutil::set_value(sample_part, "./SampleEnd", &last_frame.to_string());
 
         xmlutil::set_value(sample_part, "./SustainLoop/Start", &loop_start.to_string());
@@ -678,7 +750,7 @@ fn build_track(
     for (seg_index, segment) in segments.iter().enumerate() {
         let Some(seg_notes) = events_by_segment.get(&seg_index) else { continue }; // sample doesn't play during this pattern — no clip needed
         let local_notes: Vec<ClippedNote> = seg_notes.iter().map(|n| clip_note_to_segment(n, segment)).collect();
-        let clip = build_clip(&clip_template, &display_name, segment, &local_notes, seg_index);
+        let clip = build_clip(&clip_template, &display_name, segment, &local_notes, seg_index, color_index_for_sample(sample));
         let events_el = xmlutil::find_mut(&mut track, ".//ClipTimeable/ArrangerAutomation/Events").unwrap();
         append_child(events_el, clip);
     }
@@ -717,6 +789,32 @@ fn build_track(
     }
 
     track
+}
+
+/// Builds one `<GroupTrack>` (see GROUP_TRACK_TEMPLATE_XML) folding together a sample's own
+/// voice tracks — only called for samples that actually need more than one voice. Returns the
+/// group's own (freshly renumbered) Id, for the caller to write into each member track's own
+/// `TrackGroupId`; per the reference project this was captured from, the GroupTrack element
+/// itself must come *before* its member tracks in document order.
+fn build_group_track(group_track_template: &Element, sample: &Sample, id_counter: &mut IdCounter) -> (Element, String) {
+    let mut track = group_track_template.clone();
+    let track_id = id_counter.next().to_string();
+    track.attributes.insert("Id".to_string(), track_id.clone());
+    renumber_global_ids(&mut track, id_counter);
+
+    let display_name = format!("{:02} {}", sample.index, sample.name).trim().to_string();
+    xmlutil::set_value(&mut track, "./Name/EffectiveName", &display_name);
+    // Without also setting UserName, Ableton falls back to auto-naming a group with no
+    // human-set name — literally the generic "Group" — regardless of EffectiveName's content;
+    // see the matching comment in build_track for how this was confirmed against real Ableton.
+    xmlutil::set_value(&mut track, "./Name/UserName", &display_name);
+    xmlutil::set_value(&mut track, "./Color", &color_index_for_sample(sample).to_string());
+    // Folded by default: hides the group's own member tracks in the track list, showing just
+    // the group header (same TrackUnfolded flag build_track sets false on every voice track,
+    // there meaning "minimized row height" rather than "hides children").
+    xmlutil::set_value(&mut track, "./TrackUnfolded", "false");
+
+    (track, track_id)
 }
 
 pub fn export_als(
@@ -826,8 +924,12 @@ pub fn export_als(
     let samples_dir = output_path.parent().unwrap_or_else(|| Path::new(".")).join("Samples").join("Imported");
     std::fs::create_dir_all(&samples_dir).map_err(|e| format!("failed to create {}: {e}", samples_dir.display()))?;
 
+    let group_track_template = Element::parse(GROUP_TRACK_TEMPLATE_XML.as_bytes())
+        .map_err(|e| format!("failed to parse bundled templates/group_track.xml: {e}"))?;
+
     let mut id_counter = IdCounter(max_id(&root) + 1);
     let mut new_tracks: Vec<Element> = Vec::new();
+    let mut armed_first_track = false; // exactly one track (the very first) stays armed — see build_track
     for sample in &non_empty_samples {
         let sample = ensure_loopable(sample);
         let sample = sample.as_ref();
@@ -835,8 +937,39 @@ pub fn export_als(
         write_sample_wav(sample, &wav_path).map_err(|e| format!("failed to write {}: {e}", wav_path.display()))?;
 
         let notes = song.notes_by_sample.get(&sample.index).cloned().unwrap_or_default();
-        let track = build_track(&template_track, sample, &mut id_counter, &wav_path, &notes, &song.segments, amiga_panning);
-        new_tracks.push(track);
+        // A sample triggered on multiple tracker channels with overlapping timing needs more
+        // than one track to avoid its notes colliding — see the voice-assignment pass in
+        // export::notes::compute_song_events. Most samples only ever need one voice, so
+        // voice_count is 1 and no "(N)" suffix/group is added.
+        let voice_count = notes.iter().map(|n| n.voice + 1).max().unwrap_or(1);
+
+        // Group only kicks in once a sample actually has more than one voice track — a group
+        // around a single track would just be an extra click to open for no benefit, and is
+        // exactly the vast majority of samples.
+        let group_id = if voice_count > 1 {
+            let (group_track, group_id) = build_group_track(&group_track_template, sample, &mut id_counter);
+            new_tracks.push(group_track); // must precede its member tracks in document order
+            Some(group_id)
+        } else {
+            None
+        };
+
+        for voice in 0..voice_count {
+            let voice_notes: Vec<NoteEvent> = notes.iter().filter(|n| n.voice == voice).cloned().collect();
+            let voice_label = if voice > 0 { Some(voice + 1) } else { None }; // first voice keeps the plain name
+            let mut track = build_track(
+                &template_track, sample, &mut id_counter, &wav_path, &voice_notes, &song.segments, amiga_panning,
+                voice_label,
+            );
+            if let Some(group_id) = &group_id {
+                xmlutil::set_value(&mut track, "./TrackGroupId", group_id);
+            }
+            if !armed_first_track {
+                xmlutil::set_value(&mut track, "./DeviceChain/MainSequencer/Recorder/IsArmed", "true");
+                armed_first_track = true;
+            }
+            new_tracks.push(track);
+        }
     }
 
     {

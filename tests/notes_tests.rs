@@ -1,4 +1,4 @@
-use ablemod::export::notes::{compute_song_events, NOTE_GAP_BEATS};
+use ablemod::export::notes::compute_song_events;
 use ablemod::formats::base::{Cell, Module, Pattern, Sample};
 
 fn module(patterns: Vec<Pattern>, num_channels: usize, samples: Vec<Sample>, speed: u32, bpm: u32) -> Module {
@@ -33,9 +33,12 @@ fn note_with_effect(sample_index: u32, midi_note: i32, volume: u32, effect: u32,
 }
 
 #[test]
-fn test_note_never_overlaps_the_next_note_on_the_same_sample_across_channels() {
+fn test_overlapping_notes_on_different_channels_get_separate_voices_instead_of_being_clamped() {
     // a very long natural duration (10s @ 60bpm = 10 beats) so it would otherwise ring
-    // well past the next trigger on the *other* channel sharing this sample.
+    // well past the next trigger on the *other* channel sharing this sample — rather than
+    // truncating it to make room (the old behavior, which silently clipped whichever note
+    // triggered first), it now gets assigned a voice of its own so both notes keep their
+    // full natural length and export::als/export::midi give each its own track.
     let long_sample = Sample {
         index: 1, name: "pad".to_string(), pcm16: vec![0u8; 2 * 44100 * 10], sample_rate_hz: 44100,
         loop_start: 0, loop_length: 0, volume: 64, finetune: 0, base_note: 60,
@@ -50,19 +53,23 @@ fn test_note_never_overlaps_the_next_note_on_the_same_sample_across_channels() {
     notes.sort_by(|a, b| a.start_beat.partial_cmp(&b.start_beat).unwrap());
 
     assert_eq!(notes.iter().map(|n| n.pitch).collect::<Vec<_>>(), vec![60, 64]);
-    let row_beats = 6.0 / 24.0; // speed=6
     assert_eq!(notes[0].start_beat, 0.0);
-    // clamped to just before the next note's start (not the 10-beat natural length), with a
-    // small explicit gap so it's strictly stopped, not merely touching
-    assert_eq!(notes[0].duration_beat, row_beats - NOTE_GAP_BEATS);
-    assert!(notes[0].start_beat + notes[0].duration_beat < notes[1].start_beat);
+    assert_ne!(notes[0].voice, notes[1].voice); // separate voices instead of truncation
+    assert_eq!(notes[0].voice, 0);
+    assert_eq!(notes[1].voice, 1);
+    // rings all the way to the end of this (very short, 2-row) song rather than being
+    // clamped short to make room for notes[1] — well past notes[1]'s own start_beat
+    let row_beats = 6.0 / 24.0; // speed=6
+    assert!((notes[0].duration_beat - 2.0 * row_beats).abs() < 1e-9);
+    assert!(notes[0].start_beat + notes[0].duration_beat > notes[1].start_beat);
 }
 
 #[test]
-fn test_simultaneous_notes_dont_reintroduce_overlap_with_a_later_note() {
-    // two channels trigger the same (looped, i.e. uncapped) sample at the exact same beat;
-    // a third channel triggers it again later. The tied pair must not clamp to zero-then-
-    // floor-back-up into overlapping that later note.
+fn test_simultaneous_notes_each_get_their_own_voice() {
+    // two channels trigger the same (looped, i.e. uncapped) sample at the exact same beat —
+    // neither can ever be considered "finished" before the other starts, so they can't share
+    // a voice; a third channel triggers it again later, but since the looped sample rings on
+    // to the end of the song regardless, none of the earlier voices are free for it either.
     let looped = Sample {
         index: 1, name: "pad".to_string(), pcm16: vec![0u8; 100], sample_rate_hz: 44100,
         loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60,
@@ -77,11 +84,10 @@ fn test_simultaneous_notes_dont_reintroduce_overlap_with_a_later_note() {
     notes.sort_by(|a, b| a.start_beat.partial_cmp(&b.start_beat).unwrap());
 
     assert_eq!(notes.iter().map(|n| n.pitch).collect::<Vec<_>>(), vec![60, 64, 67]);
-    let row_beats = 6.0 / 24.0;
+    let voices: std::collections::HashSet<usize> = notes.iter().map(|n| n.voice).collect();
+    assert_eq!(voices, std::collections::HashSet::from([0, 1, 2])); // three fully-overlapping notes, three voices
     for tied_note in &notes[..2] {
         assert_eq!(tied_note.start_beat, 0.0);
-        assert_eq!(tied_note.duration_beat, row_beats - NOTE_GAP_BEATS);
-        assert!(tied_note.start_beat + tied_note.duration_beat < notes[2].start_beat);
     }
 }
 
@@ -200,6 +206,64 @@ fn test_portamento_down_bends_flat() {
 
     assert_eq!(notes.len(), 1);
     assert!(notes[0].bends[0].semitones < 0.0);
+}
+
+#[test]
+fn test_portamento_up_param_zero_repeats_the_last_nonzero_rate() {
+    // "108" then repeated "100" sustains the same slide across many rows — confirmed against
+    // ft2-clone's pitchSlideUp() source (`if (param == 0) param = ch->pitchSlideUpSpeed;`).
+    let looped = Sample {
+        index: 1, name: "pad".to_string(), pcm16: vec![0u8; 100], sample_rate_hz: 44100,
+        loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60,
+    };
+    let note_on = note(1, 60, 64);
+    let slide = effect(0x1, 48);
+    let repeat = effect(0x1, 0);
+    let m = module_default(vec![Pattern { rows: vec![vec![note_on], vec![slide], vec![repeat]] }], 1, vec![looped]);
+
+    let song = compute_song_events(&m);
+    let bends = &song.notes_by_sample[&1][0].bends;
+
+    assert_eq!(bends.len(), 10); // 5 ticks/row x 2 rows, the second row's "100" still bends
+    assert!(bends[5].semitones > bends[4].semitones); // keeps climbing into the second row
+}
+
+#[test]
+fn test_portamento_down_param_zero_repeats_the_last_nonzero_rate() {
+    let looped = Sample {
+        index: 1, name: "pad".to_string(), pcm16: vec![0u8; 100], sample_rate_hz: 44100,
+        loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60,
+    };
+    let note_on = note(1, 60, 64);
+    let slide = effect(0x2, 48);
+    let repeat = effect(0x2, 0);
+    let m = module_default(vec![Pattern { rows: vec![vec![note_on], vec![slide], vec![repeat]] }], 1, vec![looped]);
+
+    let song = compute_song_events(&m);
+    let bends = &song.notes_by_sample[&1][0].bends;
+
+    assert_eq!(bends.len(), 10);
+    assert!(bends[5].semitones < bends[4].semitones); // keeps falling into the second row
+}
+
+#[test]
+fn test_portamento_up_and_down_keep_independent_memories() {
+    // FT2 remembers each *direction's* own last rate separately (pitchSlideUpSpeed vs
+    // pitchSlideDownSpeed) — a "200" with no prior Portamento *Down* on this channel must not
+    // pick up the rate a previous Portamento *Up* used, even though both touch the same period.
+    let looped = Sample {
+        index: 1, name: "pad".to_string(), pcm16: vec![0u8; 100], sample_rate_hz: 44100,
+        loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60,
+    };
+    let note_on = note(1, 60, 64);
+    let slide_up = effect(0x1, 48);
+    let stray_down = effect(0x2, 0); // no prior Portamento *Down* to remember a rate from
+    let m = module_default(vec![Pattern { rows: vec![vec![note_on], vec![slide_up], vec![stray_down]] }], 1, vec![looped]);
+
+    let song = compute_song_events(&m);
+    let bends = &song.notes_by_sample[&1][0].bends;
+
+    assert_eq!(bends.len(), 5); // only the first row's "148" bends; the stray "200" is a no-op
 }
 
 #[test]
@@ -365,6 +429,48 @@ fn test_volume_slide_glides_across_a_row_boundary_when_reapplied_next_row() {
         volumes.iter().map(|v| v.glide).collect::<Vec<_>>(),
         vec![false, true, true, true, true, true, true, true, true, true]
     );
+}
+
+#[test]
+fn test_volume_slide_param_zero_repeats_the_last_nonzero_rate() {
+    // "A04" then repeated "A00" is the standard tracker idiom for sustaining a fade across
+    // many rows at a fixed rate — confirmed against ft2-clone's volSlide() source (`if (param
+    // == 0) param = ch->volSlideSpeed;`). Treating a param=0 row as a no-op (a bug an earlier
+    // version of this code had) would truncate the whole fade down to just its first row.
+    let looped = Sample {
+        index: 1, name: "pad".to_string(), pcm16: vec![0u8; 100], sample_rate_hz: 44100,
+        loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60,
+    };
+    let note_on = note(1, 60, 64);
+    let slide_down = effect(0xA, 0x04);
+    let repeat = effect(0xA, 0x00);
+    let m = module(
+        vec![Pattern { rows: vec![vec![note_on], vec![slide_down], vec![repeat]] }], 1, vec![looped], 6, 60,
+    );
+
+    let song = compute_song_events(&m);
+    let volumes = &song.notes_by_sample[&1][0].volumes;
+
+    assert_eq!(volumes.len(), 10); // 5 ticks/row x 2 rows, the second row's A00 still slides
+    assert_eq!(
+        volumes.iter().map(|v| v.tracker_volume).collect::<Vec<_>>(),
+        vec![60, 56, 52, 48, 44, 40, 36, 32, 28, 24] // continues at the same -4/tick rate
+    );
+}
+
+#[test]
+fn test_volume_slide_param_zero_with_no_prior_rate_is_a_no_op() {
+    let looped = Sample {
+        index: 1, name: "pad".to_string(), pcm16: vec![0u8; 100], sample_rate_hz: 44100,
+        loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60,
+    };
+    let note_on = note(1, 60, 64);
+    let stray = effect(0xA, 0x00); // no earlier Axy on this channel to remember a rate from
+    let m = module(vec![Pattern { rows: vec![vec![note_on], vec![stray]] }], 1, vec![looped], 6, 60);
+
+    let song = compute_song_events(&m);
+
+    assert!(song.notes_by_sample[&1][0].volumes.is_empty());
 }
 
 #[test]
@@ -637,3 +743,307 @@ fn test_tone_portamento_with_nothing_currently_held_is_a_no_op() {
 
     assert!(song.notes_by_sample[&1].is_empty());
 }
+
+fn looped_pad() -> Sample {
+    Sample {
+        index: 1, name: "pad".to_string(), pcm16: vec![0u8; 100], sample_rate_hz: 44100,
+        loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60,
+    }
+}
+
+#[test]
+fn test_tone_portamento_plus_volslide_continues_the_glide_and_slides_volume() {
+    let note_on = note(1, 60, 40);
+    let slide_to = Cell { midi_note: Some(67), effect: Some(0x3), effect_param: Some(0x02), ..Default::default() };
+    let combo = effect(0x5, 0x04); // continues the existing 3xy glide, slides volume down 4/tick
+    let m = module_default(vec![Pattern { rows: vec![vec![note_on], vec![slide_to], vec![combo]] }], 1, vec![looped_pad()]);
+
+    let song = compute_song_events(&m);
+    let note = &song.notes_by_sample[&1][0];
+
+    assert_eq!(note.bends.len(), 10); // 5 ticks/row x 2 rows (row2's 3xy, row3's 5xy)
+    assert!(note.bends[5].semitones > note.bends[4].semitones); // still climbing toward 67 in row3
+
+    assert_eq!(note.volumes.len(), 5); // only row3 (5xy) produces volume points
+    assert_eq!(note.volumes[0].tracker_volume, 36); // 40 - 4, row3's own param
+}
+
+#[test]
+fn test_vibrato_plus_volslide_param_zero_repeats_the_last_nonzero_rate() {
+    // "601" then repeated "600" is the standard idiom for sustaining a fade across many rows
+    // — 6xy shares Axy's exact same volSlide() call (and its param=0 memory) in ft2-clone;
+    // this previously required a nonzero param every row, breaking that idiom the same way
+    // the Axy/1xx/2xx param=0 bug once did.
+    let note_on = note(1, 60, 64);
+    let combo = effect(0x6, 0x04); // vibrato (no depth/speed set yet) + volslide -4/tick
+    let repeat = effect(0x6, 0x00); // param=0 -> reuse the -4/tick rate
+    let m = module_default(vec![Pattern { rows: vec![vec![note_on], vec![combo], vec![repeat]] }], 1, vec![looped_pad()]);
+
+    let song = compute_song_events(&m);
+    let volumes = &song.notes_by_sample[&1][0].volumes;
+
+    assert_eq!(volumes.len(), 10); // 5 ticks/row x 2 rows, the second row's "600" still slides
+    assert_eq!(
+        volumes.iter().map(|v| v.tracker_volume).collect::<Vec<_>>(),
+        vec![60, 56, 52, 48, 44, 40, 36, 32, 28, 24]
+    );
+}
+
+#[test]
+fn test_tremolo_oscillates_using_depth_speed_from_the_nibbles() {
+    let note_on = note(1, 60, 40);
+    let trem = effect(0x7, 0x28); // speed nibble=2 (*4=8), depth nibble=8
+    let m = module_default(vec![Pattern { rows: vec![vec![note_on], vec![trem]] }], 1, vec![looped_pad()]);
+
+    let song = compute_song_events(&m);
+    let volumes = &song.notes_by_sample[&1][0].volumes;
+
+    assert_eq!(volumes.len(), 5); // ticks 1..5 at speed=6
+    // early ticks (small phase into the sine cycle) swing the volume *up* from the trigger
+    // baseline — sin(2*pi*phase) is positive for phase in (0, 0.5), and tremoloPos is still
+    // well short of half a cycle after only 5 ticks at this speed.
+    assert!(volumes.iter().all(|v| v.tracker_volume >= 40));
+    assert!(volumes.iter().any(|v| v.tracker_volume > 40));
+}
+
+#[test]
+fn test_tremolo_never_touches_the_persistent_volume_baseline() {
+    // unlike Volume Slide, Tremolo's oscillation is transient (ft2-clone's tremolo() only
+    // ever touches outVol, never realVol) — a Volume Slide right after a Tremolo run must
+    // continue from the note's *original* trigger volume, not wherever the last tremolo tick
+    // happened to land.
+    let note_on = note(1, 60, 40);
+    let trem = effect(0x7, 0x28);
+    let slide_down = effect(0xA, 0x04); // -4/tick
+    let m = module_default(vec![Pattern { rows: vec![vec![note_on], vec![trem], vec![slide_down]] }], 1, vec![looped_pad()]);
+
+    let song = compute_song_events(&m);
+    let volumes = &song.notes_by_sample[&1][0].volumes;
+
+    assert_eq!(volumes.len(), 10); // 5 tremolo ticks (row2) + 5 slide ticks (row3)
+    assert_eq!(volumes[5].tracker_volume, 36); // 40 - 4, not derived from tremolo's last tick
+}
+
+#[test]
+fn test_sample_offset_sets_the_new_notes_start_position() {
+    let long_sample = Sample { pcm16: vec![0u8; 10000], ..looped_pad() }; // 5000 frames
+    let note_on = note_with_effect(1, 60, 64, 0x9, 0x04); // offset = 4*256 = 1024 frames
+    let m = module_default(vec![Pattern { rows: vec![vec![note_on]] }], 1, vec![long_sample]);
+
+    let song = compute_song_events(&m);
+    assert_eq!(song.notes_by_sample[&1][0].sample_offset_frames, 1024);
+}
+
+#[test]
+fn test_sample_offset_param_zero_repeats_the_last_nonzero_offset() {
+    let long_sample = Sample { pcm16: vec![0u8; 10000], ..looped_pad() };
+    let note1 = note_with_effect(1, 60, 64, 0x9, 0x04); // 1024
+    let note2 = note_with_effect(1, 64, 64, 0x9, 0x00); // reuse -> 1024
+    let m = module_default(vec![Pattern { rows: vec![vec![note1], vec![note2]] }], 1, vec![long_sample]);
+
+    let song = compute_song_events(&m);
+    let notes = &song.notes_by_sample[&1];
+    assert_eq!(notes[0].sample_offset_frames, 1024);
+    assert_eq!(notes[1].sample_offset_frames, 1024);
+}
+
+#[test]
+fn test_a_note_without_sample_offset_always_starts_at_zero_regardless_of_earlier_memory() {
+    let long_sample = Sample { pcm16: vec![0u8; 10000], ..looped_pad() };
+    let note1 = note_with_effect(1, 60, 64, 0x9, 0x04); // 1024
+    let note2 = note(1, 64, 64); // plain note, no 9xx at all on this row
+    let m = module_default(vec![Pattern { rows: vec![vec![note1], vec![note2]] }], 1, vec![long_sample]);
+
+    let song = compute_song_events(&m);
+    let notes = &song.notes_by_sample[&1];
+    assert_eq!(notes[0].sample_offset_frames, 1024);
+    assert_eq!(notes[1].sample_offset_frames, 0); // no 9xx here -> always starts at frame 0
+}
+
+#[test]
+fn test_sample_offset_is_clamped_to_the_samples_own_length() {
+    let short = Sample { pcm16: vec![0u8; 20], loop_length: 0, ..looped_pad() }; // 10 frames, non-looped
+    let note_on = note_with_effect(1, 60, 64, 0x9, 0x04); // 1024 frames requested, far past the sample's own 10
+    let m = module_default(vec![Pattern { rows: vec![vec![note_on]] }], 1, vec![short]);
+
+    let song = compute_song_events(&m);
+    assert_eq!(song.notes_by_sample[&1][0].sample_offset_frames, 9); // clamped to num_frames - 1
+}
+
+#[test]
+fn test_notes_with_different_sample_offsets_get_separate_voices_even_without_time_overlap() {
+    let long_sample = Sample { pcm16: vec![0u8; 10000], ..looped_pad() };
+    let empty = cell();
+    let note1 = note_with_effect(1, 60, 64, 0x9, 0x04); // offset 1024
+    let mut rows = vec![vec![note1]];
+    for _ in 0..20 {
+        rows.push(vec![empty.clone()]);
+    }
+    rows.push(vec![note(1, 64, 64)]); // no offset, long after note1 — would share a voice if
+                                       // only time-overlap mattered, since channels are
+                                       // monophonic and this is well clear of note1
+    let m = module_default(vec![Pattern { rows }], 1, vec![long_sample]);
+
+    let song = compute_song_events(&m);
+    let notes = &song.notes_by_sample[&1];
+    assert_eq!(notes.len(), 2);
+    assert_ne!(notes[0].voice, notes[1].voice); // different offsets -> different voices, always
+}
+
+#[test]
+fn test_fine_portamento_up_nudges_the_period_once_at_the_start_of_the_row() {
+    let note_on = note(1, 60, 64);
+    let fine_up = effect(0xE, 0x12); // E1x, param=2
+    let m = module_default(vec![Pattern { rows: vec![vec![note_on], vec![fine_up]] }], 1, vec![looped_pad()]);
+
+    let song = compute_song_events(&m);
+    let bends = &song.notes_by_sample[&1][0].bends;
+
+    assert_eq!(bends.len(), 1); // one-shot, not one point per tick like the ordinary 1xx
+    assert_eq!(bends[0].at_beat, 6.0 / 24.0); // right at the row's own start
+    assert!(bends[0].semitones > 0.0); // fine portamento *up* bends sharp
+    assert!(!bends[0].glide); // an instantaneous nudge, not a glide
+}
+
+#[test]
+fn test_fine_portamento_down_bends_flat() {
+    let note_on = note(1, 60, 64);
+    let fine_down = effect(0xE, 0x22); // E2x, param=2
+    let m = module_default(vec![Pattern { rows: vec![vec![note_on], vec![fine_down]] }], 1, vec![looped_pad()]);
+
+    let song = compute_song_events(&m);
+    let bends = &song.notes_by_sample[&1][0].bends;
+
+    assert_eq!(bends.len(), 1);
+    assert!(bends[0].semitones < 0.0);
+}
+
+#[test]
+fn test_fine_portamento_param_zero_repeats_the_last_nonzero_rate() {
+    let note_on = note(1, 60, 64);
+    let fine_up = effect(0xE, 0x14); // E1x param 4
+    let repeat = effect(0xE, 0x10); // E10 -> reuse the previous rate
+    let m = module_default(vec![Pattern { rows: vec![vec![note_on], vec![fine_up], vec![repeat]] }], 1, vec![looped_pad()]);
+
+    let song = compute_song_events(&m);
+    let bends = &song.notes_by_sample[&1][0].bends;
+
+    assert_eq!(bends.len(), 2); // one nudge per row, including the "repeat" row
+    assert!(bends[1].semitones > bends[0].semitones); // second nudge kept climbing, wasn't a no-op
+}
+
+#[test]
+fn test_retrigger_note_creates_a_new_note_every_param_ticks() {
+    let note_on = note(1, 60, 64);
+    let retrig = effect(0xE, 0x92); // E9x, param=2 -> retrigger every 2 ticks
+    let m = module_default(vec![Pattern { rows: vec![vec![note_on], vec![retrig]] }], 1, vec![looped_pad()]);
+
+    let song = compute_song_events(&m);
+    let notes = &song.notes_by_sample[&1];
+
+    // speed=6 -> ticks 1..5; retriggers at tick=2 and tick=4 (both divisible by 2)
+    assert_eq!(notes.len(), 3); // original trigger + 2 retriggers
+    let row_beats = 6.0 / 24.0;
+    let tick_beats = row_beats / 6.0;
+    assert_eq!(notes[1].start_beat, row_beats + 2.0 * tick_beats);
+    assert_eq!(notes[2].start_beat, row_beats + 4.0 * tick_beats);
+    assert!(notes.iter().all(|n| n.pitch == 60));
+}
+
+#[test]
+fn test_retrigger_param_zero_is_a_no_op() {
+    let note_on = note(1, 60, 64);
+    let retrig0 = effect(0xE, 0x90); // E90
+    let m = module_default(vec![Pattern { rows: vec![vec![note_on], vec![retrig0]] }], 1, vec![looped_pad()]);
+
+    let song = compute_song_events(&m);
+    assert_eq!(song.notes_by_sample[&1].len(), 1); // no retrigger happened
+}
+
+#[test]
+fn test_fine_volume_slide_up_bumps_volume_once_at_the_start_of_the_row() {
+    let note_on = note(1, 60, 20);
+    let fine_up = effect(0xE, 0xA5); // EAx, param=5
+    let m = module_default(vec![Pattern { rows: vec![vec![note_on], vec![fine_up]] }], 1, vec![looped_pad()]);
+
+    let song = compute_song_events(&m);
+    let volumes = &song.notes_by_sample[&1][0].volumes;
+
+    assert_eq!(volumes.len(), 1);
+    assert_eq!(volumes[0].tracker_volume, 25); // 20 + 5, one-shot
+    assert!(!volumes[0].glide);
+}
+
+#[test]
+fn test_fine_volume_slide_down_and_memory() {
+    let note_on = note(1, 60, 40);
+    let fine_down = effect(0xE, 0xB5); // EBx param 5
+    let repeat = effect(0xE, 0xB0); // reuse -> 5 again
+    let m = module_default(vec![Pattern { rows: vec![vec![note_on], vec![fine_down], vec![repeat]] }], 1, vec![looped_pad()]);
+
+    let song = compute_song_events(&m);
+    let volumes = &song.notes_by_sample[&1][0].volumes;
+
+    assert_eq!(volumes.len(), 2);
+    assert_eq!(volumes[0].tracker_volume, 35); // 40 - 5
+    assert_eq!(volumes[1].tracker_volume, 30); // 35 - 5, memory reused
+}
+
+#[test]
+fn test_note_cut_silences_at_the_given_tick() {
+    let note_on = note(1, 60, 64);
+    let cut = effect(0xE, 0xC3); // ECx param 3 -> silence at tick 3
+    let m = module_default(vec![Pattern { rows: vec![vec![note_on], vec![cut]] }], 1, vec![looped_pad()]);
+
+    let song = compute_song_events(&m);
+    let volumes = &song.notes_by_sample[&1][0].volumes;
+
+    assert_eq!(volumes.len(), 1);
+    assert_eq!(volumes[0].tracker_volume, 0);
+    let row_beats = 6.0 / 24.0;
+    let tick_beats = row_beats / 6.0;
+    assert_eq!(volumes[0].at_beat, row_beats + 3.0 * tick_beats);
+}
+
+#[test]
+fn test_note_cut_zero_silences_immediately_at_the_row_start() {
+    let note_on = note(1, 60, 64);
+    let cut0 = effect(0xE, 0xC0);
+    let m = module_default(vec![Pattern { rows: vec![vec![note_on], vec![cut0]] }], 1, vec![looped_pad()]);
+
+    let song = compute_song_events(&m);
+    let volumes = &song.notes_by_sample[&1][0].volumes;
+
+    assert_eq!(volumes.len(), 1);
+    assert_eq!(volumes[0].tracker_volume, 0);
+    assert_eq!(volumes[0].at_beat, 6.0 / 24.0); // exactly at the row's own start
+}
+
+#[test]
+fn test_note_delay_triggers_the_note_at_the_given_tick_not_the_row_start() {
+    // also exercises the very first note ever played on a channel being delayed (nothing was
+    // held before it) — Note Delay must not depend on an already-held note to work.
+    let delayed = note_with_effect(1, 60, 64, 0xE, 0xD3); // EDx param 3
+    let m = module_default(vec![Pattern { rows: vec![vec![delayed]] }], 1, vec![looped_pad()]);
+
+    let song = compute_song_events(&m);
+    let notes = &song.notes_by_sample[&1];
+
+    assert_eq!(notes.len(), 1);
+    let row_beats = 6.0 / 24.0;
+    let tick_beats = row_beats / 6.0;
+    assert_eq!(notes[0].start_beat, 3.0 * tick_beats); // delayed to tick 3, not the row start
+}
+
+#[test]
+fn test_note_delay_zero_triggers_normally_at_the_row_start() {
+    let not_delayed = note_with_effect(1, 60, 64, 0xE, 0xD0); // ED0 -> not delayed at all
+    let m = module_default(vec![Pattern { rows: vec![vec![not_delayed]] }], 1, vec![looped_pad()]);
+
+    let song = compute_song_events(&m);
+    let notes = &song.notes_by_sample[&1];
+
+    assert_eq!(notes.len(), 1);
+    assert_eq!(notes[0].start_beat, 0.0);
+}
+

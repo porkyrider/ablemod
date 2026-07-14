@@ -153,13 +153,22 @@ fn test_non_looped_sample_never_sustains_past_its_natural_length() {
 }
 
 #[test]
-fn test_one_track_per_sample_not_per_channel() {
-    // two channels triggering the *same* sample in the same row must land on one shared track
-    let row = vec![
-        Cell { sample_index: Some(1), midi_note: Some(60), volume: Some(64), ..Default::default() },
-        Cell { sample_index: Some(1), midi_note: Some(67), volume: Some(64), ..Default::default() },
-    ];
-    let m = module(vec![Pattern { rows: vec![row] }], 2, 6, 125, None);
+fn test_two_channels_sharing_a_sample_without_overlap_land_on_one_track() {
+    // a short, *non-looped* sample: channel 0's note finishes on its own (natural length, way
+    // under one row) long before channel 1 triggers the same sample many rows later — no
+    // overlap in time, so both fit on the same voice/track. (A looped sample, by contrast,
+    // would ring until retriggered/song end regardless of row spacing — see the "with_overlap"
+    // test below, whose two notes *do* overlap even though they're on different channels.)
+    let short_sample = Sample {
+        index: 1, name: "s".to_string(), pcm16: vec![0u8; 20], sample_rate_hz: 8363,
+        loop_start: 0, loop_length: 0, volume: 64, finetune: 0, base_note: 60,
+    };
+    let empty = Cell::default();
+    let row0 = vec![Cell { sample_index: Some(1), midi_note: Some(60), volume: Some(64), ..Default::default() }, empty.clone()];
+    let mut rows = vec![row0];
+    rows.extend((0..10).map(|_| vec![empty.clone(), empty.clone()]));
+    rows.push(vec![empty.clone(), Cell { sample_index: Some(1), midi_note: Some(67), volume: Some(64), ..Default::default() }]);
+    let m = module(vec![Pattern { rows }], 2, 6, 125, Some(vec![short_sample]));
     let dir = tempfile::tempdir().unwrap();
     let out = dir.path().join("out.mid");
 
@@ -172,6 +181,44 @@ fn test_one_track_per_sample_not_per_channel() {
         _ => None,
     }).collect();
     assert_eq!(notes, std::collections::HashSet::from([60, 67]));
+}
+
+#[test]
+fn test_two_channels_sharing_a_sample_with_overlap_get_separate_voice_tracks() {
+    // two channels triggering the *same* sample in the same row means their notes both start
+    // at the same beat, and (since channel 0's note is still held) genuinely overlap for the
+    // rest of the song — a single MIDI track can't hold two simultaneous notes without
+    // note_on/note_off pairing becoming ambiguous, so this needs a second track (see the
+    // voice-assignment pass in export::notes::compute_song_events).
+    let row = vec![
+        Cell { sample_index: Some(1), midi_note: Some(60), volume: Some(64), ..Default::default() },
+        Cell { sample_index: Some(1), midi_note: Some(67), volume: Some(64), ..Default::default() },
+    ];
+    let m = module(vec![Pattern { rows: vec![row] }], 2, 6, 125, None);
+    let dir = tempfile::tempdir().unwrap();
+    let out = dir.path().join("out.mid");
+
+    write_midi(&m, &out).unwrap();
+    let mid = midi_reader::parse(&out);
+
+    assert_eq!(mid.tracks.len(), 3); // conductor + 2 voice tracks for the one colliding sample
+    let track_name = |track_idx: usize| -> Option<String> {
+        mid.tracks[track_idx].events.iter().find_map(|(_, m)| match m {
+            Msg::TrackName(name) => Some(name.clone()),
+            _ => None,
+        })
+    };
+    assert_eq!(track_name(1).as_deref(), Some("01 s"));
+    assert_eq!(track_name(2).as_deref(), Some("01 s (2)"));
+
+    let notes_on = |track_idx: usize| -> std::collections::HashSet<u8> {
+        mid.tracks[track_idx].events.iter().filter_map(|(_, m)| match m {
+            Msg::NoteOn { note, .. } => Some(*note),
+            _ => None,
+        }).collect()
+    };
+    assert_eq!(notes_on(1), std::collections::HashSet::from([60]));
+    assert_eq!(notes_on(2), std::collections::HashSet::from([67]));
 }
 
 #[test]

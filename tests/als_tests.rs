@@ -5,11 +5,29 @@ use std::io::Read;
 
 use ablemod::export::als::{default_template_bytes, export_als, volume_to_gain, AmigaPanning, TRACK_VOLUME_DB};
 use ablemod::export::midi::write_midi;
-use ablemod::export::notes::{compute_song_events, BEATS_PER_ROW};
+use ablemod::export::notes::{compute_song_events, BEATS_PER_ROW, NoteEvent, SongEvents};
 use ablemod::formats::base::{Cell, Module, Pattern, Sample};
 use ablemod::formats::protracker::{parse, unimplemented_effect_counts};
 use ablemod::xmlutil;
-use xmltree::Element;
+use xmltree::{Element, XMLNode};
+
+// Mirrors the (sample, voice) -> track fan-out export_als itself does (see the
+// voice-assignment pass in export::notes::compute_song_events): a sample only needs more
+// than one track when it's triggered on several tracker channels with overlapping timing,
+// in which case `voice_label` follows export_als's own "(N)" naming for the 2nd+ voice.
+fn track_voice_groups<'a>(song: &'a SongEvents, non_empty_samples: &[&'a Sample]) -> Vec<(&'a Sample, Option<usize>, Vec<&'a NoteEvent>)> {
+    let mut result = Vec::new();
+    for sample in non_empty_samples {
+        let notes: Vec<&NoteEvent> = song.notes_by_sample.get(&sample.index).map(|v| v.iter().collect()).unwrap_or_default();
+        let voice_count = notes.iter().map(|n| n.voice + 1).max().unwrap_or(1);
+        for voice in 0..voice_count {
+            let voice_notes: Vec<&NoteEvent> = notes.iter().filter(|n| n.voice == voice).copied().collect();
+            let voice_label = if voice > 0 { Some(voice + 1) } else { None }; // first voice keeps the plain name
+            result.push((*sample, voice_label, voice_notes));
+        }
+    }
+    result
+}
 
 fn read_als(path: &std::path::Path) -> Element {
     let bytes = std::fs::read(path).unwrap();
@@ -36,7 +54,8 @@ fn test_default_template_is_bundled_and_usable_without_specifying_one() {
     let root = read_als(&output);
     let tracks = xmlutil::find_all_descendants(&root, "MidiTrack");
     let non_empty_samples: Vec<_> = module.samples.iter().filter(|s| !s.is_empty()).collect();
-    assert_eq!(tracks.len(), non_empty_samples.len());
+    let song = compute_song_events(&module);
+    assert_eq!(tracks.len(), track_voice_groups(&song, &non_empty_samples).len());
 }
 
 #[test]
@@ -51,7 +70,14 @@ fn test_export_als_against_real_template() {
     let root = read_als(&output);
     let tracks = xmlutil::find_all_descendants(&root, "MidiTrack");
     let non_empty_samples: Vec<_> = module.samples.iter().filter(|s| !s.is_empty()).collect();
-    assert_eq!(tracks.len(), non_empty_samples.len());
+    let song = compute_song_events(&module);
+    // A sample triggered on several tracker channels with overlapping timing gets one track
+    // per voice instead of one track per sample (see the voice-assignment pass in
+    // export::notes::compute_song_events) — track_voice_groups mirrors that same fan-out so
+    // the rest of this test can associate each exported track with its owning sample/voice.
+    let track_groups = track_voice_groups(&song, &non_empty_samples);
+    assert_eq!(tracks.len(), track_groups.len());
+    assert!(track_groups.iter().any(|(_, voice_label, _)| voice_label.is_some())); // sanity: this fixture does need >1 voice for some samples
 
     let ids: Vec<String> = tracks.iter().map(|t| attr(t, "Id")).collect();
     let unique_ids: HashSet<&String> = ids.iter().collect();
@@ -72,7 +98,7 @@ fn test_export_als_against_real_template() {
     let unique_global: HashSet<&String> = global_ids.iter().collect();
     assert_eq!(global_ids.len(), unique_global.len());
 
-    for (track, sample) in tracks.iter().zip(&non_empty_samples) {
+    for (track, (sample, _voice_label, _notes)) in tracks.iter().zip(&track_groups) {
         let sampler = xmlutil::find(track, ".//MultiSampler").unwrap();
         assert_eq!(attr(xmlutil::find(sampler, ".//Pitch/TransposeKey/Manual").unwrap(), "Value"), "0");
         assert_eq!(attr(xmlutil::find(sampler, ".//Pitch/TransposeFine/Manual").unwrap(), "Value"), "0");
@@ -88,7 +114,6 @@ fn test_export_als_against_real_template() {
         assert_eq!(attr(xmlutil::find(sampler, ".//VolumeAndPan/Envelope/ReleaseTime/Manual").unwrap(), "Value"), "1");
     }
 
-    let song = compute_song_events(&module);
     // 4aces-high.mod sets Speed=7 (F07) on its very first row, so the effective BPM (Tempo
     // x 6 / Speed, see export::notes) settles at 125*6/7 ~= 107.14 immediately, not 125
     assert_eq!(song.tempo_changes.len(), 1);
@@ -119,7 +144,8 @@ fn test_export_als_against_real_template() {
     }
 
     // notes live in Arrangement clips, split one clip per pattern play
-    for (track, sample) in tracks.iter().zip(&non_empty_samples) {
+    for (track, (sample, _voice_label, _notes)) in tracks.iter().zip(&track_groups) {
+        let track_color = attr(xmlutil::find(track, "./Color").unwrap(), "Value");
         let clips = xmlutil::find_all_descendants(track, "MidiClip");
         let clip_spans: Vec<(f64, f64)> = {
             let mut spans: Vec<(f64, f64)> = clips
@@ -140,7 +166,9 @@ fn test_export_als_against_real_template() {
             let time: f64 = attr(clip, "Time").parse().unwrap();
             let start: f64 = attr(xmlutil::find(clip, "./CurrentStart").unwrap(), "Value").parse().unwrap();
             assert_eq!(time, start);
+            assert_eq!(attr(xmlutil::find(clip, "./Color").unwrap(), "Value"), track_color); // clip color follows its track's own sample color
         }
+        assert_eq!(attr(xmlutil::find(track, "./TrackUnfolded").unwrap(), "Value"), "false"); // folded/minimized by default
         let _ = sample;
     }
 
@@ -158,9 +186,9 @@ fn test_export_als_against_real_template() {
         }
     }
 
-    // Pitch Bend/Volume/Panorama automation exists once per *track*
-    for (track, sample) in tracks.iter().zip(&non_empty_samples) {
-        let notes = &song.notes_by_sample[&sample.index];
+    // Pitch Bend/Volume/Panorama automation exists once per *track*, driven by that voice's
+    // own notes only — a sample's other voice(s) may use different effects.
+    for (track, (_sample, _voice_label, notes)) in tracks.iter().zip(&track_groups) {
         let has_bends = notes.iter().any(|n| !n.bends.is_empty());
         let has_pans = notes.iter().any(|n| !n.pans.is_empty());
 
@@ -195,11 +223,24 @@ fn test_export_als_against_real_template() {
     let wav_files: Vec<_> = std::fs::read_dir(&samples_dir).unwrap().filter(|e| {
         e.as_ref().unwrap().path().extension().map(|e| e == "wav").unwrap_or(false)
     }).collect();
-    assert_eq!(wav_files.len(), non_empty_samples.len());
+    assert_eq!(wav_files.len(), non_empty_samples.len()); // one wav per *sample*, shared across a sample's voice tracks
 
-    for (track, sample) in tracks.iter().zip(&non_empty_samples) {
+    for (track, (sample, voice_label, _notes)) in tracks.iter().zip(&track_groups) {
         let name = attr(xmlutil::find(track, "./Name/EffectiveName").unwrap(), "Value");
-        assert_eq!(name, format!("{:02} {}", sample.index, sample.name).trim());
+        let expected_base_name = format!("{:02} {}", sample.index, sample.name).trim().to_string();
+        let expected_name = match voice_label {
+            Some(v) => format!("{expected_base_name} ({v})"),
+            None => expected_base_name,
+        };
+        assert_eq!(name, expected_name);
+        // UserName must carry the same text — EffectiveName alone is just a cached, freely
+        // regenerable display value in real Ableton (confirmed by round-tripping a generated
+        // project through Live: any track without UserName also set came back renamed by
+        // Live's own auto-naming, e.g. "01 bsnare" mangled into "2-01 bsnare").
+        assert_eq!(attr(xmlutil::find(track, "./Name/UserName").unwrap(), "Value"), expected_name);
+
+        let color: i32 = attr(xmlutil::find(track, "./Color").unwrap(), "Value").parse().unwrap();
+        assert_eq!(color, (sample.index as i32 - 1).rem_euclid(70)); // one color per sample, shared by its voice(s)
 
         let file_ref = xmlutil::find(track, ".//SampleRef/FileRef").unwrap();
         let path_value = attr(xmlutil::find(file_ref, "./Path").unwrap(), "Value");
@@ -477,9 +518,9 @@ fn test_export_als_pinballf_every_effect_it_uses_is_implemented() {
     let root = read_als(&output);
     let tracks = xmlutil::find_all_descendants(&root, "MidiTrack");
     let non_empty_samples: Vec<_> = module.samples.iter().filter(|s| !s.is_empty()).collect();
-    assert_eq!(tracks.len(), non_empty_samples.len());
-
     let song = compute_song_events(&module);
+    assert_eq!(tracks.len(), track_voice_groups(&song, &non_empty_samples).len());
+
     let total_notes: usize = tracks.iter().map(|t| xmlutil::find_all_descendants(t, "MidiNoteEvent").len()).sum();
     let expected_notes: usize = song.notes_by_sample.values().map(|v| v.len()).sum();
     assert_eq!(total_notes, expected_notes);
@@ -520,6 +561,167 @@ fn test_extract_midi_pinballf_does_not_raise() {
     assert!(output.is_file());
 }
 
+fn overlapping_sample_module() -> Module {
+    // two channels trigger the same sample at the exact same beat, needing 2 voices/tracks
+    // (see the voice-assignment pass in export::notes::compute_song_events).
+    let looped = Sample { index: 1, name: "pad".to_string(), pcm16: vec![0u8; 100], sample_rate_hz: 44100, loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60 };
+    let row = vec![
+        Cell { sample_index: Some(1), midi_note: Some(60), volume: Some(64), ..Default::default() },
+        Cell { sample_index: Some(1), midi_note: Some(67), volume: Some(64), ..Default::default() },
+    ];
+    Module {
+        title: "t".to_string(), source_format: "protracker".to_string(), num_channels: 2, samples: vec![looped],
+        patterns: vec![Pattern { rows: vec![row] }], order: vec![0], restart_position: 0,
+        initial_tempo_bpm: 125, initial_speed_ticks: 6,
+    }
+}
+
+#[test]
+fn test_samples_needing_multiple_voices_get_folded_into_a_group_track() {
+    let module = overlapping_sample_module();
+    let dir = tempfile::tempdir().unwrap();
+    let output = dir.path().join("out.als");
+    export_als(&module, &output, default_template_bytes(), AmigaPanning::None).unwrap();
+
+    let root = read_als(&output);
+    let tracks_el = xmlutil::find(&root, ".//Tracks").unwrap();
+    // export_als appends the module's own tracks first, any template ReturnTracks after —
+    // only look at the first 3 (this module has exactly one sample, needing one group + 2
+    // voice tracks) rather than assume the template carries no ReturnTracks of its own.
+    let children: Vec<&Element> = tracks_el.children.iter().filter_map(|n| match n {
+        XMLNode::Element(e) => Some(e),
+        _ => None,
+    }).take(3).collect();
+
+    // the GroupTrack must precede its 2 member MidiTracks, in that order (matches the real
+    // Ableton project this GroupTrack XML was captured from)
+    assert_eq!(children.len(), 3);
+    assert_eq!(children[0].name, "GroupTrack");
+    assert_eq!(children[1].name, "MidiTrack");
+    assert_eq!(children[2].name, "MidiTrack");
+
+    let group_id = attr(children[0], "Id");
+    let group_name = attr(xmlutil::find(children[0], "./Name/EffectiveName").unwrap(), "Value");
+    assert_eq!(group_name, "01 pad");
+    // UserName too, or real Ableton displays the generic placeholder "Group" instead of this
+    // name — confirmed by round-tripping a generated project through Live (see build_track).
+    assert_eq!(attr(xmlutil::find(children[0], "./Name/UserName").unwrap(), "Value"), "01 pad");
+    let group_color = attr(xmlutil::find(children[0], "./Color").unwrap(), "Value");
+
+    // folded by default: the group hides its member tracks, and each member track itself
+    // starts minimized (both driven by the same TrackUnfolded flag).
+    assert_eq!(attr(xmlutil::find(children[0], "./TrackUnfolded").unwrap(), "Value"), "false");
+
+    for member in [children[1], children[2]] {
+        assert_eq!(attr(xmlutil::find(member, "./TrackGroupId").unwrap(), "Value"), group_id);
+        assert_eq!(attr(xmlutil::find(member, "./Color").unwrap(), "Value"), group_color);
+        assert_eq!(attr(xmlutil::find(member, "./TrackUnfolded").unwrap(), "Value"), "false");
+
+        // every clip on this track shares the track's own color too
+        for clip in xmlutil::find_all_descendants(member, "MidiClip") {
+            assert_eq!(attr(xmlutil::find(clip, "./Color").unwrap(), "Value"), group_color);
+        }
+    }
+
+    // every Id inside the cloned GroupTrack (Mixer AutomationTargets, ModulationTargets, ...)
+    // must be renumbered uniquely, just like a cloned MidiTrack — no collisions with anything
+    // else in the document.
+    let mut global_ids: Vec<String> = Vec::new();
+    for node in xmlutil::iter_elements(&root) {
+        if let Some(id) = node.attributes.get("Id") {
+            if !id.is_empty() && id.chars().all(|c| c.is_ascii_digit()) && id.parse::<i64>().unwrap() >= 1000 {
+                global_ids.push(id.clone());
+            }
+        }
+    }
+    let unique: HashSet<&String> = global_ids.iter().collect();
+    assert_eq!(global_ids.len(), unique.len());
+}
+
+#[test]
+fn test_only_the_first_track_is_armed() {
+    // the template's own Sampler track happens to be armed (a common state to leave a track
+    // in) — cloning it as-is would arm every exported track. Only the very first track of the
+    // whole project should come out armed, matching what a musician actually wants to see on
+    // opening a freshly generated project.
+    let module = overlapping_sample_module(); // 1 sample needing 2 voices -> group + 2 MidiTracks
+    let dir = tempfile::tempdir().unwrap();
+    let output = dir.path().join("out.als");
+    export_als(&module, &output, default_template_bytes(), AmigaPanning::None).unwrap();
+
+    let root = read_als(&output);
+    let midi_tracks = xmlutil::find_all_descendants(&root, "MidiTrack");
+    assert_eq!(midi_tracks.len(), 2);
+    let armed: Vec<bool> = midi_tracks
+        .iter()
+        .map(|t| attr(xmlutil::find(t, "./DeviceChain/MainSequencer/Recorder/IsArmed").unwrap(), "Value") == "true")
+        .collect();
+    assert_eq!(armed, vec![true, false]);
+}
+
+#[test]
+fn test_only_one_track_armed_across_a_multi_sample_project() {
+    let module = parse(&std::fs::read("tests/fixtures/4aces-high.mod").unwrap());
+    let dir = tempfile::tempdir().unwrap();
+    let output = dir.path().join("out.als");
+    export_als(&module, &output, default_template_bytes(), AmigaPanning::None).unwrap();
+
+    let root = read_als(&output);
+    let midi_tracks = xmlutil::find_all_descendants(&root, "MidiTrack");
+    assert!(midi_tracks.len() > 1);
+    let armed_count = midi_tracks
+        .iter()
+        .filter(|t| attr(xmlutil::find(t, "./DeviceChain/MainSequencer/Recorder/IsArmed").unwrap(), "Value") == "true")
+        .count();
+    assert_eq!(armed_count, 1);
+}
+
+#[test]
+fn test_a_single_voice_sample_is_not_grouped() {
+    let looped = Sample { index: 1, name: "pad".to_string(), pcm16: vec![0u8; 100], sample_rate_hz: 44100, loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60 };
+    let note_on = Cell { sample_index: Some(1), midi_note: Some(60), volume: Some(64), ..Default::default() };
+    let module = Module {
+        title: "t".to_string(), source_format: "protracker".to_string(), num_channels: 1, samples: vec![looped],
+        patterns: vec![Pattern { rows: vec![vec![note_on]] }], order: vec![0], restart_position: 0,
+        initial_tempo_bpm: 125, initial_speed_ticks: 6,
+    };
+    let dir = tempfile::tempdir().unwrap();
+    let output = dir.path().join("out.als");
+    export_als(&module, &output, default_template_bytes(), AmigaPanning::None).unwrap();
+
+    let root = read_als(&output);
+    assert!(xmlutil::find_all_descendants(&root, "GroupTrack").is_empty());
+    let track = xmlutil::find(&root, ".//MidiTrack").unwrap();
+    assert_eq!(attr(xmlutil::find(track, "./TrackGroupId").unwrap(), "Value"), "-1");
+    assert_eq!(attr(xmlutil::find(track, "./TrackUnfolded").unwrap(), "Value"), "false"); // folded/minimized by default
+}
+
+#[test]
+fn test_sample_offset_sets_the_tracks_own_sample_start() {
+    // Sample Offset (9xx) has no per-note representation in Ableton's Sampler — instead, a
+    // note needing a different start position gets routed to its own voice/track (see the
+    // voice-assignment pass in export::notes), whose *whole* MultiSamplePart uses that offset
+    // as SampleStart.
+    let long_sample = Sample {
+        index: 1, name: "pad".to_string(), pcm16: vec![0u8; 10000], sample_rate_hz: 44100,
+        loop_start: 0, loop_length: 0, volume: 64, finetune: 0, base_note: 60,
+    };
+    let offset_note = Cell { sample_index: Some(1), midi_note: Some(60), volume: Some(64), effect: Some(0x9), effect_param: Some(4) }; // 4*256 = 1024
+    let module = Module {
+        title: "t".to_string(), source_format: "protracker".to_string(), num_channels: 1, samples: vec![long_sample],
+        patterns: vec![Pattern { rows: vec![vec![offset_note]] }], order: vec![0], restart_position: 0,
+        initial_tempo_bpm: 125, initial_speed_ticks: 6,
+    };
+    let dir = tempfile::tempdir().unwrap();
+    let output = dir.path().join("out.als");
+    export_als(&module, &output, default_template_bytes(), AmigaPanning::None).unwrap();
+
+    let root = read_als(&output);
+    let track = xmlutil::find(&root, ".//MidiTrack").unwrap();
+    let sample_start = attr(xmlutil::find(track, ".//MultiSamplePart/SampleStart").unwrap(), "Value");
+    assert_eq!(sample_start, "1024");
+}
+
 fn amiga_panning_module() -> Module {
     // one note per row, each on a different channel (0..3, in order) so they land at cleanly
     // separated, unambiguous beats in notes_by_sample — avoids same-beat tie-breaking in the
@@ -548,21 +750,26 @@ fn pan_baseline_values(amiga_panning: AmigaPanning) -> Vec<f64> {
     export_als(&module, &output, default_template_bytes(), amiga_panning).unwrap();
 
     let root = read_als(&output);
-    let track = xmlutil::find(&root, ".//MidiTrack").unwrap();
-    let sampler = xmlutil::find(track, ".//MultiSampler").unwrap();
-    let pan_target = attr(xmlutil::find(sampler, "./VolumeAndPan/Panorama/AutomationTarget").unwrap(), "Id");
-    let envelopes_el = xmlutil::find(track, "./AutomationEnvelopes/Envelopes").unwrap();
-    let track_envelopes = xmlutil::find_all_children(envelopes_el, "AutomationEnvelope");
-    let Some(env) = track_envelopes.iter().find(|e| attr(xmlutil::find(e, "./EnvelopeTarget/PointeeId").unwrap(), "Value") == pan_target) else {
-        return Vec::new();
-    };
-    let mut values: Vec<f64> = xmlutil::find_all_descendants(env, "FloatEvent")
+    let tracks = xmlutil::find_all_descendants(&root, "MidiTrack");
+    // Each of the 4 channels' single note spans to the end of the song, so all 4 overlap and
+    // this sample needs one voice — hence one track — per channel: gather each track's own
+    // baseline pan value, in track order (which follows voice order, i.e. channel order).
+    tracks
         .iter()
-        .filter(|e| attr(e, "Time") != "-63072000")
-        .map(|e| attr(e, "Value").parse().unwrap())
-        .collect();
-    values.dedup_by(|a, b| a == b);
-    values
+        .filter_map(|track| {
+            let sampler = xmlutil::find(track, ".//MultiSampler").unwrap();
+            let pan_target = attr(xmlutil::find(sampler, "./VolumeAndPan/Panorama/AutomationTarget").unwrap(), "Id");
+            let envelopes_el = xmlutil::find(track, "./AutomationEnvelopes/Envelopes").unwrap();
+            let track_envelopes = xmlutil::find_all_children(envelopes_el, "AutomationEnvelope");
+            let env = track_envelopes
+                .iter()
+                .find(|e| attr(xmlutil::find(e, "./EnvelopeTarget/PointeeId").unwrap(), "Value") == pan_target)?;
+            xmlutil::find_all_descendants(env, "FloatEvent")
+                .iter()
+                .find(|e| attr(e, "Time") != "-63072000")
+                .map(|e| attr(e, "Value").parse().unwrap())
+        })
+        .collect()
 }
 
 #[test]
@@ -575,19 +782,21 @@ fn test_amiga_panning_none_has_no_pan_envelope_without_8xx() {
 fn test_amiga_panning_full_hard_pans_l_r_r_l() {
     let values = pan_baseline_values(AmigaPanning::Full);
     // channel 0 (note 60) -> left, 1 (note 61) -> right, 2 (note 62) -> right, 3 (note 63) -> left
-    assert_eq!(values, vec![-1.0, 1.0, -1.0]); // channel1 and channel2 share the same "right" baseline, so no distinct value in between
+    // each channel's note spans to the end of the song, so all 4 overlap and land on 4
+    // separate voices/tracks — no dedup collapsing distinct tracks together anymore.
+    assert_eq!(values, vec![-1.0, 1.0, 1.0, -1.0]);
 }
 
 #[test]
 fn test_amiga_panning_medium_is_half_separation() {
     let values = pan_baseline_values(AmigaPanning::Medium);
-    assert_eq!(values, vec![-0.5, 0.5, -0.5]);
+    assert_eq!(values, vec![-0.5, 0.5, 0.5, -0.5]);
 }
 
 #[test]
 fn test_amiga_panning_light_is_quarter_separation() {
     let values = pan_baseline_values(AmigaPanning::Light);
-    assert_eq!(values, vec![-0.25, 0.25, -0.25]);
+    assert_eq!(values, vec![-0.25, 0.25, 0.25, -0.25]);
 }
 
 fn module_with_looped_sample(loop_start: u32, loop_length: u32, total_frames: u32) -> Module {
