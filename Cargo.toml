@@ -2,7 +2,7 @@
 name = "ablemod"
 version = "0.1.0"
 edition = "2021"
-description = "Convert ProTracker/FastTracker/ScreamTracker modules to Ableton Live projects"
+description = "Convert ProTracker modules and VGM/VGZ chiptune rips to Ableton Live projects"
 
 [[bin]]
 name = "ablemod"

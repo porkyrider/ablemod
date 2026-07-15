@@ -1,0 +1,3208 @@
+			<MidiTrack Id="12" SelectedToolPanel="2" SelectedTransformationName="Arpeggiate" SelectedGeneratorName="Rhythm">
+				<LomId Value="0" />
+				<LomIdView Value="0" />
+				<IsContentSelectedInDocument Value="true" />
+				<PreferredContentViewMode Value="0" />
+				<TrackDelay>
+					<Value Value="0" />
+					<IsValueSampleBased Value="false" />
+				</TrackDelay>
+				<Name>
+					<EffectiveName Value="1-Wavetable" />
+					<UserName Value="" />
+					<Annotation Value="" />
+					<MemorizedFirstClipName Value="" />
+				</Name>
+				<Color Value="1" />
+				<AutomationEnvelopes>
+					<Envelopes />
+				</AutomationEnvelopes>
+				<TrackGroupId Value="-1" />
+				<TrackUnfolded Value="true" />
+				<DevicesListWrapper LomId="0" />
+				<ClipSlotsListWrapper LomId="0" />
+				<ArrangementClipsListWrapper LomId="0" />
+				<TakeLanesListWrapper LomId="0" />
+				<ViewData Value='{"push-selected-note-mode": "play", "push-instrument-selected-notes": [36], "push-note-repeat-rate": 0.5, "push-note-repeat-enabled": false}' />
+				<TakeLanes>
+					<TakeLanes />
+					<AreTakeLanesFolded Value="true" />
+				</TakeLanes>
+				<LinkedTrackGroupId Value="-1" />
+				<SavedPlayingSlot Value="-1" />
+				<SavedPlayingOffset Value="0" />
+				<Freeze Value="false" />
+				<PostProcessFreezeClips Value="0" />
+				<DeviceChain>
+					<AutomationLanes>
+						<AutomationLanes>
+							<AutomationLane Id="0">
+								<SelectedDevice Value="1" />
+								<SelectedEnvelope Value="4" />
+								<IsContentSelectedInDocument Value="false" />
+								<LaneHeight Value="68" />
+							</AutomationLane>
+						</AutomationLanes>
+						<AreAdditionalAutomationLanesFolded Value="false" />
+					</AutomationLanes>
+					<ClipEnvelopeChooserViewState>
+						<SelectedDevice Value="1" />
+						<SelectedEnvelope Value="4" />
+						<PreferModulationVisible Value="true" />
+					</ClipEnvelopeChooserViewState>
+					<AudioInputRouting>
+						<Target Value="AudioIn/External/S0" />
+						<UpperDisplayString Value="Ext. In" />
+						<LowerDisplayString Value="1/2" />
+						<MpeSettings>
+							<ZoneType Value="0" />
+							<FirstNoteChannel Value="1" />
+							<LastNoteChannel Value="15" />
+						</MpeSettings>
+						<MpePitchBendUsesTuning Value="true" />
+					</AudioInputRouting>
+					<MidiInputRouting>
+						<Target Value="MidiIn/External.All/-1" />
+						<UpperDisplayString Value="Ext: All Ins" />
+						<LowerDisplayString Value="" />
+						<MpeSettings>
+							<ZoneType Value="0" />
+							<FirstNoteChannel Value="1" />
+							<LastNoteChannel Value="15" />
+						</MpeSettings>
+						<MpePitchBendUsesTuning Value="true" />
+					</MidiInputRouting>
+					<AudioOutputRouting>
+						<Target Value="AudioOut/Main" />
+						<UpperDisplayString Value="Master" />
+						<LowerDisplayString Value="" />
+						<MpeSettings>
+							<ZoneType Value="0" />
+							<FirstNoteChannel Value="1" />
+							<LastNoteChannel Value="15" />
+						</MpeSettings>
+						<MpePitchBendUsesTuning Value="true" />
+					</AudioOutputRouting>
+					<MidiOutputRouting>
+						<Target Value="MidiOut/None" />
+						<UpperDisplayString Value="None" />
+						<LowerDisplayString Value="" />
+						<MpeSettings>
+							<ZoneType Value="0" />
+							<FirstNoteChannel Value="1" />
+							<LastNoteChannel Value="15" />
+						</MpeSettings>
+						<MpePitchBendUsesTuning Value="true" />
+					</MidiOutputRouting>
+					<Mixer>
+						<LomId Value="0" />
+						<LomIdView Value="0" />
+						<IsExpanded Value="true" />
+						<BreakoutIsExpanded Value="false" />
+						<On>
+							<LomId Value="0" />
+							<Manual Value="true" />
+							<AutomationTarget Id="15830">
+								<LockEnvelope Value="0" />
+							</AutomationTarget>
+							<MidiCCOnOffThresholds>
+								<Min Value="64" />
+								<Max Value="127" />
+							</MidiCCOnOffThresholds>
+						</On>
+						<ModulationSourceCount Value="0" />
+						<ParametersListWrapper LomId="0" />
+						<Pointee Id="19712" />
+						<LastSelectedTimeableIndex Value="0" />
+						<LastSelectedClipEnvelopeIndex Value="0" />
+						<LastPresetRef>
+							<Value />
+						</LastPresetRef>
+						<LockedScripts />
+						<IsFolded Value="false" />
+						<ShouldShowPresetName Value="false" />
+						<UserName Value="" />
+						<Annotation Value="" />
+						<SourceContext>
+							<Value />
+						</SourceContext>
+						<MpePitchBendUsesTuning Value="true" />
+						<ViewData Value="{}" />
+						<Sends>
+							<TrackSendHolder Id="0">
+								<Send>
+									<LomId Value="0" />
+									<Manual Value="0.0003162277571" />
+									<MidiControllerRange>
+										<Min Value="0.0003162277571" />
+										<Max Value="1" />
+									</MidiControllerRange>
+									<AutomationTarget Id="15831">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<ModulationTarget Id="15832">
+										<LockEnvelope Value="0" />
+									</ModulationTarget>
+								</Send>
+								<EnabledByUser Value="true" />
+							</TrackSendHolder>
+							<TrackSendHolder Id="1">
+								<Send>
+									<LomId Value="0" />
+									<Manual Value="0.0003162277571" />
+									<MidiControllerRange>
+										<Min Value="0.0003162277571" />
+										<Max Value="1" />
+									</MidiControllerRange>
+									<AutomationTarget Id="15833">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<ModulationTarget Id="15834">
+										<LockEnvelope Value="0" />
+									</ModulationTarget>
+								</Send>
+								<EnabledByUser Value="true" />
+							</TrackSendHolder>
+						</Sends>
+						<Speaker>
+							<LomId Value="0" />
+							<Manual Value="true" />
+							<AutomationTarget Id="15835">
+								<LockEnvelope Value="0" />
+							</AutomationTarget>
+							<MidiCCOnOffThresholds>
+								<Min Value="64" />
+								<Max Value="127" />
+							</MidiCCOnOffThresholds>
+						</Speaker>
+						<SoloSink Value="false" />
+						<PanMode Value="0" />
+						<Pan>
+							<LomId Value="0" />
+							<Manual Value="0" />
+							<MidiControllerRange>
+								<Min Value="-1" />
+								<Max Value="1" />
+							</MidiControllerRange>
+							<AutomationTarget Id="15836">
+								<LockEnvelope Value="0" />
+							</AutomationTarget>
+							<ModulationTarget Id="15837">
+								<LockEnvelope Value="0" />
+							</ModulationTarget>
+						</Pan>
+						<SplitStereoPanL>
+							<LomId Value="0" />
+							<Manual Value="-1" />
+							<MidiControllerRange>
+								<Min Value="-1" />
+								<Max Value="1" />
+							</MidiControllerRange>
+							<AutomationTarget Id="16151">
+								<LockEnvelope Value="0" />
+							</AutomationTarget>
+							<ModulationTarget Id="16152">
+								<LockEnvelope Value="0" />
+							</ModulationTarget>
+						</SplitStereoPanL>
+						<SplitStereoPanR>
+							<LomId Value="0" />
+							<Manual Value="1" />
+							<MidiControllerRange>
+								<Min Value="-1" />
+								<Max Value="1" />
+							</MidiControllerRange>
+							<AutomationTarget Id="16153">
+								<LockEnvelope Value="0" />
+							</AutomationTarget>
+							<ModulationTarget Id="16154">
+								<LockEnvelope Value="0" />
+							</ModulationTarget>
+						</SplitStereoPanR>
+						<Volume>
+							<LomId Value="0" />
+							<Manual Value="1" />
+							<MidiControllerRange>
+								<Min Value="0.0003162277571" />
+								<Max Value="1.99526238" />
+							</MidiControllerRange>
+							<AutomationTarget Id="15838">
+								<LockEnvelope Value="0" />
+							</AutomationTarget>
+							<ModulationTarget Id="15839">
+								<LockEnvelope Value="0" />
+							</ModulationTarget>
+						</Volume>
+						<ViewStateSessionTrackWidth Value="93" />
+						<CrossFadeState>
+							<LomId Value="0" />
+							<Manual Value="1" />
+							<AutomationTarget Id="15840">
+								<LockEnvelope Value="0" />
+							</AutomationTarget>
+							<MidiControllerRange>
+								<Min Value="0" />
+								<Max Value="2" />
+							</MidiControllerRange>
+						</CrossFadeState>
+						<SendsListWrapper LomId="0" />
+					</Mixer>
+					<MainSequencer>
+						<LomId Value="0" />
+						<LomIdView Value="0" />
+						<IsExpanded Value="true" />
+						<BreakoutIsExpanded Value="false" />
+						<On>
+							<LomId Value="0" />
+							<Manual Value="true" />
+							<AutomationTarget Id="15841">
+								<LockEnvelope Value="0" />
+							</AutomationTarget>
+							<MidiCCOnOffThresholds>
+								<Min Value="64" />
+								<Max Value="127" />
+							</MidiCCOnOffThresholds>
+						</On>
+						<ModulationSourceCount Value="0" />
+						<ParametersListWrapper LomId="0" />
+						<Pointee Id="19713" />
+						<LastSelectedTimeableIndex Value="0" />
+						<LastSelectedClipEnvelopeIndex Value="0" />
+						<LastPresetRef>
+							<Value />
+						</LastPresetRef>
+						<LockedScripts />
+						<IsFolded Value="false" />
+						<ShouldShowPresetName Value="false" />
+						<UserName Value="" />
+						<Annotation Value="" />
+						<SourceContext>
+							<Value />
+						</SourceContext>
+						<MpePitchBendUsesTuning Value="true" />
+						<ViewData Value="{}" />
+						<ClipSlotList>
+							<ClipSlot Id="0">
+								<LomId Value="0" />
+								<ClipSlot>
+									<Value />
+								</ClipSlot>
+								<HasStop Value="true" />
+							</ClipSlot>
+							<ClipSlot Id="1">
+								<LomId Value="0" />
+								<ClipSlot>
+									<Value />
+								</ClipSlot>
+								<HasStop Value="true" />
+							</ClipSlot>
+							<ClipSlot Id="2">
+								<LomId Value="0" />
+								<ClipSlot>
+									<Value />
+								</ClipSlot>
+								<HasStop Value="true" />
+							</ClipSlot>
+							<ClipSlot Id="3">
+								<LomId Value="0" />
+								<ClipSlot>
+									<Value />
+								</ClipSlot>
+								<HasStop Value="true" />
+							</ClipSlot>
+							<ClipSlot Id="4">
+								<LomId Value="0" />
+								<ClipSlot>
+									<Value />
+								</ClipSlot>
+								<HasStop Value="true" />
+							</ClipSlot>
+							<ClipSlot Id="5">
+								<LomId Value="0" />
+								<ClipSlot>
+									<Value />
+								</ClipSlot>
+								<HasStop Value="true" />
+							</ClipSlot>
+							<ClipSlot Id="6">
+								<LomId Value="0" />
+								<ClipSlot>
+									<Value />
+								</ClipSlot>
+								<HasStop Value="true" />
+							</ClipSlot>
+							<ClipSlot Id="7">
+								<LomId Value="0" />
+								<ClipSlot>
+									<Value />
+								</ClipSlot>
+								<HasStop Value="true" />
+							</ClipSlot>
+						</ClipSlotList>
+						<MonitoringEnum Value="1" />
+						<KeepRecordMonitoringLatency Value="true" />
+						<ClipTimeable>
+							<ArrangerAutomation>
+								<Events>
+									<MidiClip Id="0" Time="0">
+										<LomId Value="0" />
+										<LomIdView Value="0" />
+										<CurrentStart Value="0" />
+										<CurrentEnd Value="4" />
+										<Loop>
+											<LoopStart Value="0" />
+											<LoopEnd Value="4" />
+											<StartRelative Value="0" />
+											<LoopOn Value="true" />
+											<OutMarker Value="4" />
+											<HiddenLoopStart Value="0" />
+											<HiddenLoopEnd Value="4" />
+										</Loop>
+										<Name Value="" />
+										<Annotation Value="" />
+										<Color Value="1" />
+										<LaunchMode Value="0" />
+										<LaunchQuantisation Value="0" />
+										<TimeSignature>
+											<TimeSignatures>
+												<RemoteableTimeSignature Id="0">
+													<Numerator Value="4" />
+													<Denominator Value="4" />
+													<Time Value="0" />
+												</RemoteableTimeSignature>
+											</TimeSignatures>
+										</TimeSignature>
+										<Envelopes>
+											<Envelopes />
+										</Envelopes>
+										<ScrollerTimePreserver>
+											<LeftTime Value="0" />
+											<RightTime Value="4" />
+										</ScrollerTimePreserver>
+										<TimeSelection>
+											<AnchorTime Value="0.75" />
+											<OtherTime Value="1" />
+										</TimeSelection>
+										<Legato Value="false" />
+										<Ram Value="false" />
+										<GrooveSettings>
+											<GrooveId Value="4" />
+										</GrooveSettings>
+										<Disabled Value="false" />
+										<VelocityAmount Value="0" />
+										<FollowAction>
+											<FollowTime Value="4" />
+											<IsLinked Value="true" />
+											<LoopIterations Value="1" />
+											<FollowActionA Value="4" />
+											<FollowActionB Value="0" />
+											<FollowChanceA Value="100" />
+											<FollowChanceB Value="0" />
+											<JumpIndexA Value="1" />
+											<JumpIndexB Value="1" />
+											<FollowActionEnabled Value="false" />
+										</FollowAction>
+										<Grid>
+											<FixedNumerator Value="1" />
+											<FixedDenominator Value="16" />
+											<GridIntervalPixel Value="20" />
+											<Ntoles Value="2" />
+											<SnapToGrid Value="true" />
+											<Fixed Value="true" />
+										</Grid>
+										<FreezeStart Value="0" />
+										<FreezeEnd Value="0" />
+										<IsWarped Value="true" />
+										<TakeId Value="1" />
+										<IsInKey Value="true" />
+										<ScaleInformation>
+											<Root Value="0" />
+											<Name Value="0" />
+										</ScaleInformation>
+										<AutomationEnvelopesListWrapper LomId="0" />
+										<Notes>
+											<KeyTracks>
+												<KeyTrack Id="1">
+													<Notes>
+														<MidiNoteEvent Time="0.25" Duration="0.25" Velocity="100" OffVelocity="64" NoteId="2" />
+														<MidiNoteEvent Time="0.75" Duration="0.25" Velocity="100" OffVelocity="64" NoteId="4" />
+													</Notes>
+													<MidiKey Value="62" />
+												</KeyTrack>
+												<KeyTrack Id="0">
+													<Notes>
+														<MidiNoteEvent Time="0" Duration="0.25" Velocity="100" OffVelocity="64" NoteId="1" />
+													</Notes>
+													<MidiKey Value="65" />
+												</KeyTrack>
+												<KeyTrack Id="2">
+													<Notes>
+														<MidiNoteEvent Time="0.5" Duration="0.25" Velocity="100" OffVelocity="64" NoteId="3" />
+													</Notes>
+													<MidiKey Value="66" />
+												</KeyTrack>
+											</KeyTracks>
+											<PerNoteEventStore>
+												<EventLists />
+											</PerNoteEventStore>
+											<NoteProbabilityGroups />
+											<ProbabilityGroupIdGenerator>
+												<NextId Value="1" />
+											</ProbabilityGroupIdGenerator>
+											<NoteIdGenerator>
+												<NextId Value="5" />
+											</NoteIdGenerator>
+										</Notes>
+										<BankSelectCoarse Value="-1" />
+										<BankSelectFine Value="-1" />
+										<ProgramChange Value="-1" />
+										<NoteEditorFoldInZoom Value="-1" />
+										<NoteEditorFoldInScroll Value="0" />
+										<NoteEditorFoldOutZoom Value="867" />
+										<NoteEditorFoldOutScroll Value="-373" />
+										<NoteEditorFoldScaleZoom Value="-1" />
+										<NoteEditorFoldScaleScroll Value="0" />
+										<NoteSpellingPreference Value="0" />
+										<AccidentalSpellingPreference Value="3" />
+										<PreferFlatRootNote Value="false" />
+										<ExpressionGrid>
+											<FixedNumerator Value="1" />
+											<FixedDenominator Value="16" />
+											<GridIntervalPixel Value="20" />
+											<Ntoles Value="2" />
+											<SnapToGrid Value="false" />
+											<Fixed Value="false" />
+										</ExpressionGrid>
+									</MidiClip>
+								</Events>
+								<AutomationTransformViewState>
+									<IsTransformPending Value="false" />
+									<TimeAndValueTransforms />
+								</AutomationTransformViewState>
+							</ArrangerAutomation>
+						</ClipTimeable>
+						<Recorder>
+							<IsArmed Value="true" />
+							<TakeCounter Value="0" />
+						</Recorder>
+						<MidiControllers>
+							<ControllerTargets.0 Id="15842">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.0>
+							<ControllerTargets.1 Id="15843">
+								<LockEnvelope Value="1" />
+							</ControllerTargets.1>
+							<ControllerTargets.2 Id="15844">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.2>
+							<ControllerTargets.3 Id="15845">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.3>
+							<ControllerTargets.4 Id="15846">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.4>
+							<ControllerTargets.5 Id="15847">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.5>
+							<ControllerTargets.6 Id="15848">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.6>
+							<ControllerTargets.7 Id="15849">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.7>
+							<ControllerTargets.8 Id="15850">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.8>
+							<ControllerTargets.9 Id="15851">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.9>
+							<ControllerTargets.10 Id="15852">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.10>
+							<ControllerTargets.11 Id="15853">
+								<LockEnvelope Value="1" />
+							</ControllerTargets.11>
+							<ControllerTargets.12 Id="15854">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.12>
+							<ControllerTargets.13 Id="15855">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.13>
+							<ControllerTargets.14 Id="15856">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.14>
+							<ControllerTargets.15 Id="15857">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.15>
+							<ControllerTargets.16 Id="15858">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.16>
+							<ControllerTargets.17 Id="15859">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.17>
+							<ControllerTargets.18 Id="15860">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.18>
+							<ControllerTargets.19 Id="15861">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.19>
+							<ControllerTargets.20 Id="15862">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.20>
+							<ControllerTargets.21 Id="15863">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.21>
+							<ControllerTargets.22 Id="15864">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.22>
+							<ControllerTargets.23 Id="15865">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.23>
+							<ControllerTargets.24 Id="15866">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.24>
+							<ControllerTargets.25 Id="15867">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.25>
+							<ControllerTargets.26 Id="15868">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.26>
+							<ControllerTargets.27 Id="15869">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.27>
+							<ControllerTargets.28 Id="15870">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.28>
+							<ControllerTargets.29 Id="15871">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.29>
+							<ControllerTargets.30 Id="15872">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.30>
+							<ControllerTargets.31 Id="15873">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.31>
+							<ControllerTargets.32 Id="15874">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.32>
+							<ControllerTargets.33 Id="15875">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.33>
+							<ControllerTargets.34 Id="15876">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.34>
+							<ControllerTargets.35 Id="15877">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.35>
+							<ControllerTargets.36 Id="15878">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.36>
+							<ControllerTargets.37 Id="15879">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.37>
+							<ControllerTargets.38 Id="15880">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.38>
+							<ControllerTargets.39 Id="15881">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.39>
+							<ControllerTargets.40 Id="15882">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.40>
+							<ControllerTargets.41 Id="15883">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.41>
+							<ControllerTargets.42 Id="15884">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.42>
+							<ControllerTargets.43 Id="15885">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.43>
+							<ControllerTargets.44 Id="15886">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.44>
+							<ControllerTargets.45 Id="15887">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.45>
+							<ControllerTargets.46 Id="15888">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.46>
+							<ControllerTargets.47 Id="15889">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.47>
+							<ControllerTargets.48 Id="15890">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.48>
+							<ControllerTargets.49 Id="15891">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.49>
+							<ControllerTargets.50 Id="15892">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.50>
+							<ControllerTargets.51 Id="15893">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.51>
+							<ControllerTargets.52 Id="15894">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.52>
+							<ControllerTargets.53 Id="15895">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.53>
+							<ControllerTargets.54 Id="15896">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.54>
+							<ControllerTargets.55 Id="15897">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.55>
+							<ControllerTargets.56 Id="15898">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.56>
+							<ControllerTargets.57 Id="15899">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.57>
+							<ControllerTargets.58 Id="15900">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.58>
+							<ControllerTargets.59 Id="15901">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.59>
+							<ControllerTargets.60 Id="15902">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.60>
+							<ControllerTargets.61 Id="15903">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.61>
+							<ControllerTargets.62 Id="15904">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.62>
+							<ControllerTargets.63 Id="15905">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.63>
+							<ControllerTargets.64 Id="15906">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.64>
+							<ControllerTargets.65 Id="15907">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.65>
+							<ControllerTargets.66 Id="15908">
+								<LockEnvelope Value="1" />
+							</ControllerTargets.66>
+							<ControllerTargets.67 Id="15909">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.67>
+							<ControllerTargets.68 Id="15910">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.68>
+							<ControllerTargets.69 Id="15911">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.69>
+							<ControllerTargets.70 Id="15912">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.70>
+							<ControllerTargets.71 Id="15913">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.71>
+							<ControllerTargets.72 Id="15914">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.72>
+							<ControllerTargets.73 Id="15915">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.73>
+							<ControllerTargets.74 Id="15916">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.74>
+							<ControllerTargets.75 Id="15917">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.75>
+							<ControllerTargets.76 Id="15918">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.76>
+							<ControllerTargets.77 Id="15919">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.77>
+							<ControllerTargets.78 Id="15920">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.78>
+							<ControllerTargets.79 Id="15921">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.79>
+							<ControllerTargets.80 Id="15922">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.80>
+							<ControllerTargets.81 Id="15923">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.81>
+							<ControllerTargets.82 Id="15924">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.82>
+							<ControllerTargets.83 Id="15925">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.83>
+							<ControllerTargets.84 Id="15926">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.84>
+							<ControllerTargets.85 Id="15927">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.85>
+							<ControllerTargets.86 Id="15928">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.86>
+							<ControllerTargets.87 Id="15929">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.87>
+							<ControllerTargets.88 Id="15930">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.88>
+							<ControllerTargets.89 Id="15931">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.89>
+							<ControllerTargets.90 Id="15932">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.90>
+							<ControllerTargets.91 Id="15933">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.91>
+							<ControllerTargets.92 Id="15934">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.92>
+							<ControllerTargets.93 Id="15935">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.93>
+							<ControllerTargets.94 Id="15936">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.94>
+							<ControllerTargets.95 Id="15937">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.95>
+							<ControllerTargets.96 Id="15938">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.96>
+							<ControllerTargets.97 Id="15939">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.97>
+							<ControllerTargets.98 Id="15940">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.98>
+							<ControllerTargets.99 Id="15941">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.99>
+							<ControllerTargets.100 Id="15942">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.100>
+							<ControllerTargets.101 Id="15943">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.101>
+							<ControllerTargets.102 Id="15944">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.102>
+							<ControllerTargets.103 Id="15945">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.103>
+							<ControllerTargets.104 Id="15946">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.104>
+							<ControllerTargets.105 Id="15947">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.105>
+							<ControllerTargets.106 Id="15948">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.106>
+							<ControllerTargets.107 Id="15949">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.107>
+							<ControllerTargets.108 Id="15950">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.108>
+							<ControllerTargets.109 Id="15951">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.109>
+							<ControllerTargets.110 Id="15952">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.110>
+							<ControllerTargets.111 Id="15953">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.111>
+							<ControllerTargets.112 Id="15954">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.112>
+							<ControllerTargets.113 Id="15955">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.113>
+							<ControllerTargets.114 Id="15956">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.114>
+							<ControllerTargets.115 Id="15957">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.115>
+							<ControllerTargets.116 Id="15958">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.116>
+							<ControllerTargets.117 Id="15959">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.117>
+							<ControllerTargets.118 Id="15960">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.118>
+							<ControllerTargets.119 Id="15961">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.119>
+							<ControllerTargets.120 Id="15962">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.120>
+							<ControllerTargets.121 Id="15963">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.121>
+							<ControllerTargets.122 Id="15964">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.122>
+							<ControllerTargets.123 Id="15965">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.123>
+							<ControllerTargets.124 Id="15966">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.124>
+							<ControllerTargets.125 Id="15967">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.125>
+							<ControllerTargets.126 Id="15968">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.126>
+							<ControllerTargets.127 Id="15969">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.127>
+							<ControllerTargets.128 Id="15970">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.128>
+							<ControllerTargets.129 Id="15971">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.129>
+							<ControllerTargets.130 Id="15972">
+								<LockEnvelope Value="0" />
+							</ControllerTargets.130>
+						</MidiControllers>
+					</MainSequencer>
+					<FreezeSequencer>
+						<LomId Value="0" />
+						<LomIdView Value="0" />
+						<IsExpanded Value="true" />
+						<BreakoutIsExpanded Value="false" />
+						<On>
+							<LomId Value="0" />
+							<Manual Value="true" />
+							<AutomationTarget Id="15973">
+								<LockEnvelope Value="0" />
+							</AutomationTarget>
+							<MidiCCOnOffThresholds>
+								<Min Value="64" />
+								<Max Value="127" />
+							</MidiCCOnOffThresholds>
+						</On>
+						<ModulationSourceCount Value="0" />
+						<ParametersListWrapper LomId="0" />
+						<Pointee Id="19714" />
+						<LastSelectedTimeableIndex Value="0" />
+						<LastSelectedClipEnvelopeIndex Value="0" />
+						<LastPresetRef>
+							<Value />
+						</LastPresetRef>
+						<LockedScripts />
+						<IsFolded Value="false" />
+						<ShouldShowPresetName Value="false" />
+						<UserName Value="" />
+						<Annotation Value="" />
+						<SourceContext>
+							<Value />
+						</SourceContext>
+						<MpePitchBendUsesTuning Value="true" />
+						<ViewData Value="{}" />
+						<ClipSlotList>
+							<ClipSlot Id="0">
+								<LomId Value="0" />
+								<ClipSlot>
+									<Value />
+								</ClipSlot>
+								<HasStop Value="true" />
+							</ClipSlot>
+							<ClipSlot Id="1">
+								<LomId Value="0" />
+								<ClipSlot>
+									<Value />
+								</ClipSlot>
+								<HasStop Value="true" />
+							</ClipSlot>
+							<ClipSlot Id="2">
+								<LomId Value="0" />
+								<ClipSlot>
+									<Value />
+								</ClipSlot>
+								<HasStop Value="true" />
+							</ClipSlot>
+							<ClipSlot Id="3">
+								<LomId Value="0" />
+								<ClipSlot>
+									<Value />
+								</ClipSlot>
+								<HasStop Value="true" />
+							</ClipSlot>
+							<ClipSlot Id="4">
+								<LomId Value="0" />
+								<ClipSlot>
+									<Value />
+								</ClipSlot>
+								<HasStop Value="true" />
+							</ClipSlot>
+							<ClipSlot Id="5">
+								<LomId Value="0" />
+								<ClipSlot>
+									<Value />
+								</ClipSlot>
+								<HasStop Value="true" />
+							</ClipSlot>
+							<ClipSlot Id="6">
+								<LomId Value="0" />
+								<ClipSlot>
+									<Value />
+								</ClipSlot>
+								<HasStop Value="true" />
+							</ClipSlot>
+							<ClipSlot Id="7">
+								<LomId Value="0" />
+								<ClipSlot>
+									<Value />
+								</ClipSlot>
+								<HasStop Value="true" />
+							</ClipSlot>
+						</ClipSlotList>
+						<MonitoringEnum Value="1" />
+						<KeepRecordMonitoringLatency Value="true" />
+						<Sample>
+							<ArrangerAutomation>
+								<Events />
+								<AutomationTransformViewState>
+									<IsTransformPending Value="false" />
+									<TimeAndValueTransforms />
+								</AutomationTransformViewState>
+							</ArrangerAutomation>
+						</Sample>
+						<VolumeModulationTarget Id="15974">
+							<LockEnvelope Value="0" />
+						</VolumeModulationTarget>
+						<TranspositionModulationTarget Id="15975">
+							<LockEnvelope Value="0" />
+						</TranspositionModulationTarget>
+						<TransientEnvelopeModulationTarget Id="22153">
+							<LockEnvelope Value="0" />
+						</TransientEnvelopeModulationTarget>
+						<GrainSizeModulationTarget Id="15976">
+							<LockEnvelope Value="0" />
+						</GrainSizeModulationTarget>
+						<FluxModulationTarget Id="15977">
+							<LockEnvelope Value="0" />
+						</FluxModulationTarget>
+						<SampleOffsetModulationTarget Id="15978">
+							<LockEnvelope Value="0" />
+						</SampleOffsetModulationTarget>
+						<ComplexProFormantsModulationTarget Id="22154">
+							<LockEnvelope Value="0" />
+						</ComplexProFormantsModulationTarget>
+						<ComplexProEnvelopeModulationTarget Id="22155">
+							<LockEnvelope Value="0" />
+						</ComplexProEnvelopeModulationTarget>
+						<PitchViewScrollPosition Value="-1073741824" />
+						<SampleOffsetModulationScrollPosition Value="-1073741824" />
+						<Recorder>
+							<IsArmed Value="false" />
+							<TakeCounter Value="1" />
+						</Recorder>
+					</FreezeSequencer>
+					<DeviceChain>
+						<Devices>
+							<InstrumentVector Id="0">
+								<LomId Value="0" />
+								<LomIdView Value="0" />
+								<IsExpanded Value="false" />
+								<BreakoutIsExpanded Value="false" />
+								<On>
+									<LomId Value="0" />
+									<Manual Value="true" />
+									<AutomationTarget Id="22192">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<MidiCCOnOffThresholds>
+										<Min Value="64" />
+										<Max Value="127" />
+									</MidiCCOnOffThresholds>
+								</On>
+								<ModulationSourceCount Value="0" />
+								<ParametersListWrapper LomId="0" />
+								<Pointee Id="22193" />
+								<LastSelectedTimeableIndex Value="4" />
+								<LastSelectedClipEnvelopeIndex Value="4" />
+								<LastPresetRef>
+									<Value>
+										<AbletonDefaultPresetRef Id="2">
+											<FileRef>
+												<RelativePathType Value="0" />
+												<RelativePath Value="" />
+												<Path Value="" />
+												<Type Value="2" />
+												<LivePackName Value="" />
+												<LivePackId Value="" />
+												<OriginalFileSize Value="0" />
+												<OriginalCrc Value="0" />
+												<SourceHint Value="" />
+											</FileRef>
+											<DeviceId Name="InstrumentVector" />
+										</AbletonDefaultPresetRef>
+									</Value>
+								</LastPresetRef>
+								<LockedScripts />
+								<IsFolded Value="false" />
+								<ShouldShowPresetName Value="true" />
+								<UserName Value="Wavetable" />
+								<Annotation Value="" />
+								<SourceContext>
+									<Value>
+										<BranchSourceContext Id="0">
+											<OriginalFileRef />
+											<BrowserContentPath Value="view:X-Synths#Wavetable" />
+											<LocalFiltersJson Value="" />
+											<PresetRef>
+												<AbletonDefaultPresetRef Id="0">
+													<FileRef>
+														<RelativePathType Value="0" />
+														<RelativePath Value="" />
+														<Path Value="" />
+														<Type Value="2" />
+														<LivePackName Value="" />
+														<LivePackId Value="" />
+														<OriginalFileSize Value="0" />
+														<OriginalCrc Value="0" />
+														<SourceHint Value="" />
+													</FileRef>
+													<DeviceId Name="InstrumentVector" />
+												</AbletonDefaultPresetRef>
+											</PresetRef>
+											<BranchDeviceId Value="device:ableton:instr:InstrumentVector" />
+										</BranchSourceContext>
+									</Value>
+								</SourceContext>
+								<MpePitchBendUsesTuning Value="true" />
+								<ViewData Value="{}" />
+								<OverwriteProtectionNumber Value="3076" />
+								<AmpEnvelopeDisplayMode Value="0" />
+								<Envelope2DisplayMode Value="0" />
+								<Envelope3DisplayMode Value="0" />
+								<VisualizationMode Value="0" />
+								<SelectedModulationSourceVisualization Value="0" />
+								<SelectedOscillatorBreakout Value="0" />
+								<SpriteName1 Value="" />
+								<SpriteName2 Value="Basic Shapes" />
+								<UserSprite1>
+									<Value>
+										<SampleRef Id="0">
+											<FileRef>
+												<RelativePathType Value="1" />
+												<RelativePath Value="../../Desktop/automaton_wt_1000_ten_morphs_2048w_100s_1.wav" />
+												<Path Value="/Users/yannmichon/Desktop/automaton_wt_1000_ten_morphs_2048w_100s_1.wav" />
+												<Type Value="2" />
+												<LivePackName Value="" />
+												<LivePackId Value="" />
+												<OriginalFileSize Value="409644" />
+												<OriginalCrc Value="17371" />
+												<SourceHint Value="" />
+											</FileRef>
+											<LastModDate Value="1563610272" />
+											<SourceContext />
+											<SampleUsageHint Value="0" />
+											<DefaultDuration Value="204800" />
+											<DefaultSampleRate Value="44100" />
+											<SamplesToAutoWarp Value="0" />
+										</SampleRef>
+									</Value>
+								</UserSprite1>
+								<UserSprite2>
+									<Value />
+								</UserSprite2>
+								<UseRawUserWavetable1 Value="false" />
+								<UseRawUserWavetable2 Value="false" />
+								<Voice_Oscillator1_On>
+									<LomId Value="0" />
+									<Manual Value="true" />
+									<AutomationTarget Id="22194">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<MidiCCOnOffThresholds>
+										<Min Value="64" />
+										<Max Value="127" />
+									</MidiCCOnOffThresholds>
+								</Voice_Oscillator1_On>
+								<Voice_Oscillator1_Pitch_Transpose>
+									<LomId Value="0" />
+									<Manual Value="0" />
+									<MidiControllerRange>
+										<Min Value="-24" />
+										<Max Value="24" />
+									</MidiControllerRange>
+									<AutomationTarget Id="22195">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<ModulationTarget Id="22196">
+										<LockEnvelope Value="0" />
+									</ModulationTarget>
+								</Voice_Oscillator1_Pitch_Transpose>
+								<Voice_Oscillator1_Pitch_Detune>
+									<LomId Value="0" />
+									<Manual Value="0" />
+									<MidiControllerRange>
+										<Min Value="-0.5" />
+										<Max Value="0.5" />
+									</MidiControllerRange>
+									<AutomationTarget Id="22197">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<ModulationTarget Id="22198">
+										<LockEnvelope Value="0" />
+									</ModulationTarget>
+								</Voice_Oscillator1_Pitch_Detune>
+								<Voice_Oscillator1_Wavetables_WavePosition>
+									<LomId Value="0" />
+									<Manual Value="0.2710280418" />
+									<MidiControllerRange>
+										<Min Value="0" />
+										<Max Value="1" />
+									</MidiControllerRange>
+									<AutomationTarget Id="22199">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<ModulationTarget Id="22200">
+										<LockEnvelope Value="0" />
+									</ModulationTarget>
+								</Voice_Oscillator1_Wavetables_WavePosition>
+								<Voice_Oscillator1_Effects_EffectMode Value="3" />
+								<Voice_Oscillator1_Effects_Effect1>
+									<LomId Value="0" />
+									<Manual Value="0" />
+									<MidiControllerRange>
+										<Min Value="-1" />
+										<Max Value="1" />
+									</MidiControllerRange>
+									<AutomationTarget Id="22201">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<ModulationTarget Id="22202">
+										<LockEnvelope Value="0" />
+									</ModulationTarget>
+								</Voice_Oscillator1_Effects_Effect1>
+								<Voice_Oscillator1_Effects_Effect2>
+									<LomId Value="0" />
+									<Manual Value="0" />
+									<MidiControllerRange>
+										<Min Value="0" />
+										<Max Value="1" />
+									</MidiControllerRange>
+									<AutomationTarget Id="22203">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<ModulationTarget Id="22204">
+										<LockEnvelope Value="0" />
+									</ModulationTarget>
+								</Voice_Oscillator1_Effects_Effect2>
+								<Voice_Oscillator1_Pan>
+									<LomId Value="0" />
+									<Manual Value="0" />
+									<MidiControllerRange>
+										<Min Value="-1" />
+										<Max Value="1" />
+									</MidiControllerRange>
+									<AutomationTarget Id="22205">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<ModulationTarget Id="22206">
+										<LockEnvelope Value="0" />
+									</ModulationTarget>
+								</Voice_Oscillator1_Pan>
+								<Voice_Oscillator1_Gain>
+									<LomId Value="0" />
+									<Manual Value="1" />
+									<MidiControllerRange>
+										<Min Value="0" />
+										<Max Value="1" />
+									</MidiControllerRange>
+									<AutomationTarget Id="22207">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<ModulationTarget Id="22208">
+										<LockEnvelope Value="0" />
+									</ModulationTarget>
+								</Voice_Oscillator1_Gain>
+								<Voice_Oscillator2_On>
+									<LomId Value="0" />
+									<Manual Value="false" />
+									<AutomationTarget Id="22209">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<MidiCCOnOffThresholds>
+										<Min Value="64" />
+										<Max Value="127" />
+									</MidiCCOnOffThresholds>
+								</Voice_Oscillator2_On>
+								<Voice_Oscillator2_Pitch_Transpose>
+									<LomId Value="0" />
+									<Manual Value="0" />
+									<MidiControllerRange>
+										<Min Value="-24" />
+										<Max Value="24" />
+									</MidiControllerRange>
+									<AutomationTarget Id="22210">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<ModulationTarget Id="22211">
+										<LockEnvelope Value="0" />
+									</ModulationTarget>
+								</Voice_Oscillator2_Pitch_Transpose>
+								<Voice_Oscillator2_Pitch_Detune>
+									<LomId Value="0" />
+									<Manual Value="0" />
+									<MidiControllerRange>
+										<Min Value="-0.5" />
+										<Max Value="0.5" />
+									</MidiControllerRange>
+									<AutomationTarget Id="22212">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<ModulationTarget Id="22213">
+										<LockEnvelope Value="0" />
+									</ModulationTarget>
+								</Voice_Oscillator2_Pitch_Detune>
+								<Voice_Oscillator2_Wavetables_WavePosition>
+									<LomId Value="0" />
+									<Manual Value="0" />
+									<MidiControllerRange>
+										<Min Value="0" />
+										<Max Value="1" />
+									</MidiControllerRange>
+									<AutomationTarget Id="22214">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<ModulationTarget Id="22215">
+										<LockEnvelope Value="0" />
+									</ModulationTarget>
+								</Voice_Oscillator2_Wavetables_WavePosition>
+								<Voice_Oscillator2_Effects_EffectMode Value="0" />
+								<Voice_Oscillator2_Effects_Effect1>
+									<LomId Value="0" />
+									<Manual Value="0" />
+									<MidiControllerRange>
+										<Min Value="-1" />
+										<Max Value="1" />
+									</MidiControllerRange>
+									<AutomationTarget Id="22216">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<ModulationTarget Id="22217">
+										<LockEnvelope Value="0" />
+									</ModulationTarget>
+								</Voice_Oscillator2_Effects_Effect1>
+								<Voice_Oscillator2_Effects_Effect2>
+									<LomId Value="0" />
+									<Manual Value="0" />
+									<MidiControllerRange>
+										<Min Value="0" />
+										<Max Value="1" />
+									</MidiControllerRange>
+									<AutomationTarget Id="22218">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<ModulationTarget Id="22219">
+										<LockEnvelope Value="0" />
+									</ModulationTarget>
+								</Voice_Oscillator2_Effects_Effect2>
+								<Voice_Oscillator2_Pan>
+									<LomId Value="0" />
+									<Manual Value="0" />
+									<MidiControllerRange>
+										<Min Value="-1" />
+										<Max Value="1" />
+									</MidiControllerRange>
+									<AutomationTarget Id="22220">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<ModulationTarget Id="22221">
+										<LockEnvelope Value="0" />
+									</ModulationTarget>
+								</Voice_Oscillator2_Pan>
+								<Voice_Oscillator2_Gain>
+									<LomId Value="0" />
+									<Manual Value="1" />
+									<MidiControllerRange>
+										<Min Value="0" />
+										<Max Value="1" />
+									</MidiControllerRange>
+									<AutomationTarget Id="22222">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<ModulationTarget Id="22223">
+										<LockEnvelope Value="0" />
+									</ModulationTarget>
+								</Voice_Oscillator2_Gain>
+								<Voice_SubOscillator_On>
+									<LomId Value="0" />
+									<Manual Value="false" />
+									<AutomationTarget Id="22224">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<MidiCCOnOffThresholds>
+										<Min Value="64" />
+										<Max Value="127" />
+									</MidiCCOnOffThresholds>
+								</Voice_SubOscillator_On>
+								<Voice_SubOscillator_Tone>
+									<LomId Value="0" />
+									<Manual Value="0" />
+									<MidiControllerRange>
+										<Min Value="0" />
+										<Max Value="1" />
+									</MidiControllerRange>
+									<AutomationTarget Id="22225">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<ModulationTarget Id="22226">
+										<LockEnvelope Value="0" />
+									</ModulationTarget>
+								</Voice_SubOscillator_Tone>
+								<Voice_SubOscillator_Gain>
+									<LomId Value="0" />
+									<Manual Value="0.5011875033" />
+									<MidiControllerRange>
+										<Min Value="0" />
+										<Max Value="1" />
+									</MidiControllerRange>
+									<AutomationTarget Id="22227">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<ModulationTarget Id="22228">
+										<LockEnvelope Value="0" />
+									</ModulationTarget>
+								</Voice_SubOscillator_Gain>
+								<Voice_SubOscillator_Transpose>
+									<LomId Value="0" />
+									<Manual Value="1" />
+									<AutomationTarget Id="22229">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<MidiControllerRange>
+										<Min Value="0" />
+										<Max Value="2" />
+									</MidiControllerRange>
+								</Voice_SubOscillator_Transpose>
+								<Voice_Filter1_On>
+									<LomId Value="0" />
+									<Manual Value="true" />
+									<AutomationTarget Id="22230">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<MidiCCOnOffThresholds>
+										<Min Value="64" />
+										<Max Value="127" />
+									</MidiCCOnOffThresholds>
+								</Voice_Filter1_On>
+								<Voice_Filter1_Type>
+									<LomId Value="0" />
+									<Manual Value="0" />
+									<AutomationTarget Id="22231">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<MidiControllerRange>
+										<Min Value="0" />
+										<Max Value="4" />
+									</MidiControllerRange>
+								</Voice_Filter1_Type>
+								<Voice_Filter1_CircuitLpHp>
+									<LomId Value="0" />
+									<Manual Value="0" />
+									<AutomationTarget Id="22232">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<MidiControllerRange>
+										<Min Value="0" />
+										<Max Value="4" />
+									</MidiControllerRange>
+								</Voice_Filter1_CircuitLpHp>
+								<Voice_Filter1_CircuitBpNoMo>
+									<LomId Value="0" />
+									<Manual Value="0" />
+									<AutomationTarget Id="22233">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<MidiControllerRange>
+										<Min Value="0" />
+										<Max Value="1" />
+									</MidiControllerRange>
+								</Voice_Filter1_CircuitBpNoMo>
+								<Voice_Filter1_Slope>
+									<LomId Value="0" />
+									<Manual Value="0" />
+									<AutomationTarget Id="22234">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<MidiControllerRange>
+										<Min Value="0" />
+										<Max Value="1" />
+									</MidiControllerRange>
+								</Voice_Filter1_Slope>
+								<Voice_Filter1_Frequency>
+									<LomId Value="0" />
+									<Manual Value="20479.998" />
+									<MidiControllerRange>
+										<Min Value="19.9999981" />
+										<Max Value="20479.998" />
+									</MidiControllerRange>
+									<AutomationTarget Id="22235">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<ModulationTarget Id="22236">
+										<LockEnvelope Value="0" />
+									</ModulationTarget>
+								</Voice_Filter1_Frequency>
+								<Voice_Filter1_Resonance>
+									<LomId Value="0" />
+									<Manual Value="0" />
+									<MidiControllerRange>
+										<Min Value="0" />
+										<Max Value="1.25" />
+									</MidiControllerRange>
+									<AutomationTarget Id="22237">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<ModulationTarget Id="22238">
+										<LockEnvelope Value="0" />
+									</ModulationTarget>
+								</Voice_Filter1_Resonance>
+								<Voice_Filter1_Drive>
+									<LomId Value="0" />
+									<Manual Value="0" />
+									<MidiControllerRange>
+										<Min Value="0" />
+										<Max Value="24" />
+									</MidiControllerRange>
+									<AutomationTarget Id="22239">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<ModulationTarget Id="22240">
+										<LockEnvelope Value="0" />
+									</ModulationTarget>
+								</Voice_Filter1_Drive>
+								<Voice_Filter1_Morph>
+									<LomId Value="0" />
+									<Manual Value="0" />
+									<MidiControllerRange>
+										<Min Value="0" />
+										<Max Value="1" />
+									</MidiControllerRange>
+									<AutomationTarget Id="22241">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<ModulationTarget Id="22242">
+										<LockEnvelope Value="0" />
+									</ModulationTarget>
+								</Voice_Filter1_Morph>
+								<Voice_Filter2_On>
+									<LomId Value="0" />
+									<Manual Value="false" />
+									<AutomationTarget Id="22243">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<MidiCCOnOffThresholds>
+										<Min Value="64" />
+										<Max Value="127" />
+									</MidiCCOnOffThresholds>
+								</Voice_Filter2_On>
+								<Voice_Filter2_Type>
+									<LomId Value="0" />
+									<Manual Value="1" />
+									<AutomationTarget Id="22244">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<MidiControllerRange>
+										<Min Value="0" />
+										<Max Value="4" />
+									</MidiControllerRange>
+								</Voice_Filter2_Type>
+								<Voice_Filter2_CircuitLpHp>
+									<LomId Value="0" />
+									<Manual Value="0" />
+									<AutomationTarget Id="22245">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<MidiControllerRange>
+										<Min Value="0" />
+										<Max Value="4" />
+									</MidiControllerRange>
+								</Voice_Filter2_CircuitLpHp>
+								<Voice_Filter2_CircuitBpNoMo>
+									<LomId Value="0" />
+									<Manual Value="0" />
+									<AutomationTarget Id="22246">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<MidiControllerRange>
+										<Min Value="0" />
+										<Max Value="1" />
+									</MidiControllerRange>
+								</Voice_Filter2_CircuitBpNoMo>
+								<Voice_Filter2_Slope>
+									<LomId Value="0" />
+									<Manual Value="0" />
+									<AutomationTarget Id="22247">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<MidiControllerRange>
+										<Min Value="0" />
+										<Max Value="1" />
+									</MidiControllerRange>
+								</Voice_Filter2_Slope>
+								<Voice_Filter2_Frequency>
+									<LomId Value="0" />
+									<Manual Value="20.000309" />
+									<MidiControllerRange>
+										<Min Value="19.9999981" />
+										<Max Value="20479.998" />
+									</MidiControllerRange>
+									<AutomationTarget Id="22248">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<ModulationTarget Id="22249">
+										<LockEnvelope Value="0" />
+									</ModulationTarget>
+								</Voice_Filter2_Frequency>
+								<Voice_Filter2_Resonance>
+									<LomId Value="0" />
+									<Manual Value="0" />
+									<MidiControllerRange>
+										<Min Value="0" />
+										<Max Value="1.25" />
+									</MidiControllerRange>
+									<AutomationTarget Id="22250">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<ModulationTarget Id="22251">
+										<LockEnvelope Value="0" />
+									</ModulationTarget>
+								</Voice_Filter2_Resonance>
+								<Voice_Filter2_Drive>
+									<LomId Value="0" />
+									<Manual Value="0" />
+									<MidiControllerRange>
+										<Min Value="0" />
+										<Max Value="24" />
+									</MidiControllerRange>
+									<AutomationTarget Id="22252">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<ModulationTarget Id="22253">
+										<LockEnvelope Value="0" />
+									</ModulationTarget>
+								</Voice_Filter2_Drive>
+								<Voice_Filter2_Morph>
+									<LomId Value="0" />
+									<Manual Value="0" />
+									<MidiControllerRange>
+										<Min Value="0" />
+										<Max Value="1" />
+									</MidiControllerRange>
+									<AutomationTarget Id="22254">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<ModulationTarget Id="22255">
+										<LockEnvelope Value="0" />
+									</ModulationTarget>
+								</Voice_Filter2_Morph>
+								<Voice_Modulators_AmpEnvelope_Times_Attack>
+									<LomId Value="0" />
+									<Manual Value="0.001000000164" />
+									<MidiControllerRange>
+										<Min Value="0" />
+										<Max Value="20" />
+									</MidiControllerRange>
+									<AutomationTarget Id="22256">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<ModulationTarget Id="22257">
+										<LockEnvelope Value="0" />
+									</ModulationTarget>
+								</Voice_Modulators_AmpEnvelope_Times_Attack>
+								<Voice_Modulators_AmpEnvelope_Times_Decay>
+									<LomId Value="0" />
+									<Manual Value="0.5999999642" />
+									<MidiControllerRange>
+										<Min Value="0.001500000013" />
+										<Max Value="20" />
+									</MidiControllerRange>
+									<AutomationTarget Id="22258">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<ModulationTarget Id="22259">
+										<LockEnvelope Value="0" />
+									</ModulationTarget>
+								</Voice_Modulators_AmpEnvelope_Times_Decay>
+								<Voice_Modulators_AmpEnvelope_Times_Release>
+									<LomId Value="0" />
+									<Manual Value="0.5999999642" />
+									<MidiControllerRange>
+										<Min Value="0.001500000013" />
+										<Max Value="20" />
+									</MidiControllerRange>
+									<AutomationTarget Id="22260">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<ModulationTarget Id="22261">
+										<LockEnvelope Value="0" />
+									</ModulationTarget>
+								</Voice_Modulators_AmpEnvelope_Times_Release>
+								<Voice_Modulators_AmpEnvelope_Slopes_Attack>
+									<LomId Value="0" />
+									<Manual Value="0" />
+									<MidiControllerRange>
+										<Min Value="-1" />
+										<Max Value="1" />
+									</MidiControllerRange>
+									<AutomationTarget Id="22262">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<ModulationTarget Id="22263">
+										<LockEnvelope Value="0" />
+									</ModulationTarget>
+								</Voice_Modulators_AmpEnvelope_Slopes_Attack>
+								<Voice_Modulators_AmpEnvelope_Slopes_Decay>
+									<LomId Value="0" />
+									<Manual Value="0.5" />
+									<MidiControllerRange>
+										<Min Value="-1" />
+										<Max Value="1" />
+									</MidiControllerRange>
+									<AutomationTarget Id="22264">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<ModulationTarget Id="22265">
+										<LockEnvelope Value="0" />
+									</ModulationTarget>
+								</Voice_Modulators_AmpEnvelope_Slopes_Decay>
+								<Voice_Modulators_AmpEnvelope_Slopes_Release>
+									<LomId Value="0" />
+									<Manual Value="0.5" />
+									<MidiControllerRange>
+										<Min Value="-1" />
+										<Max Value="1" />
+									</MidiControllerRange>
+									<AutomationTarget Id="22266">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<ModulationTarget Id="22267">
+										<LockEnvelope Value="0" />
+									</ModulationTarget>
+								</Voice_Modulators_AmpEnvelope_Slopes_Release>
+								<Voice_Modulators_AmpEnvelope_Sustain>
+									<LomId Value="0" />
+									<Manual Value="0.5011875629" />
+									<MidiControllerRange>
+										<Min Value="0" />
+										<Max Value="1" />
+									</MidiControllerRange>
+									<AutomationTarget Id="22268">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<ModulationTarget Id="22269">
+										<LockEnvelope Value="0" />
+									</ModulationTarget>
+								</Voice_Modulators_AmpEnvelope_Sustain>
+								<Voice_Modulators_AmpEnvelope_LoopMode>
+									<LomId Value="0" />
+									<Manual Value="0" />
+									<AutomationTarget Id="22270">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<MidiControllerRange>
+										<Min Value="0" />
+										<Max Value="2" />
+									</MidiControllerRange>
+								</Voice_Modulators_AmpEnvelope_LoopMode>
+								<Voice_Modulators_Envelope2_Times_Attack>
+									<LomId Value="0" />
+									<Manual Value="0.001000000164" />
+									<MidiControllerRange>
+										<Min Value="0" />
+										<Max Value="20" />
+									</MidiControllerRange>
+									<AutomationTarget Id="22271">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<ModulationTarget Id="22272">
+										<LockEnvelope Value="0" />
+									</ModulationTarget>
+								</Voice_Modulators_Envelope2_Times_Attack>
+								<Voice_Modulators_Envelope2_Times_Decay>
+									<LomId Value="0" />
+									<Manual Value="0.5999999642" />
+									<MidiControllerRange>
+										<Min Value="0.001500000013" />
+										<Max Value="20" />
+									</MidiControllerRange>
+									<AutomationTarget Id="22273">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<ModulationTarget Id="22274">
+										<LockEnvelope Value="0" />
+									</ModulationTarget>
+								</Voice_Modulators_Envelope2_Times_Decay>
+								<Voice_Modulators_Envelope2_Times_Release>
+									<LomId Value="0" />
+									<Manual Value="0.5999999642" />
+									<MidiControllerRange>
+										<Min Value="0.001500000013" />
+										<Max Value="20" />
+									</MidiControllerRange>
+									<AutomationTarget Id="22275">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<ModulationTarget Id="22276">
+										<LockEnvelope Value="0" />
+									</ModulationTarget>
+								</Voice_Modulators_Envelope2_Times_Release>
+								<Voice_Modulators_Envelope2_Slopes_Attack>
+									<LomId Value="0" />
+									<Manual Value="0" />
+									<MidiControllerRange>
+										<Min Value="-1" />
+										<Max Value="1" />
+									</MidiControllerRange>
+									<AutomationTarget Id="22277">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<ModulationTarget Id="22278">
+										<LockEnvelope Value="0" />
+									</ModulationTarget>
+								</Voice_Modulators_Envelope2_Slopes_Attack>
+								<Voice_Modulators_Envelope2_Slopes_Decay>
+									<LomId Value="0" />
+									<Manual Value="0.5" />
+									<MidiControllerRange>
+										<Min Value="-1" />
+										<Max Value="1" />
+									</MidiControllerRange>
+									<AutomationTarget Id="22279">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<ModulationTarget Id="22280">
+										<LockEnvelope Value="0" />
+									</ModulationTarget>
+								</Voice_Modulators_Envelope2_Slopes_Decay>
+								<Voice_Modulators_Envelope2_Slopes_Release>
+									<LomId Value="0" />
+									<Manual Value="0.5" />
+									<MidiControllerRange>
+										<Min Value="-1" />
+										<Max Value="1" />
+									</MidiControllerRange>
+									<AutomationTarget Id="22281">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<ModulationTarget Id="22282">
+										<LockEnvelope Value="0" />
+									</ModulationTarget>
+								</Voice_Modulators_Envelope2_Slopes_Release>
+								<Voice_Modulators_Envelope2_Values_Initial>
+									<LomId Value="0" />
+									<Manual Value="0" />
+									<MidiControllerRange>
+										<Min Value="0" />
+										<Max Value="1" />
+									</MidiControllerRange>
+									<AutomationTarget Id="22283">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<ModulationTarget Id="22284">
+										<LockEnvelope Value="0" />
+									</ModulationTarget>
+								</Voice_Modulators_Envelope2_Values_Initial>
+								<Voice_Modulators_Envelope2_Values_Peak>
+									<LomId Value="0" />
+									<Manual Value="1" />
+									<MidiControllerRange>
+										<Min Value="0" />
+										<Max Value="1" />
+									</MidiControllerRange>
+									<AutomationTarget Id="22285">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<ModulationTarget Id="22286">
+										<LockEnvelope Value="0" />
+									</ModulationTarget>
+								</Voice_Modulators_Envelope2_Values_Peak>
+								<Voice_Modulators_Envelope2_Values_Sustain>
+									<LomId Value="0" />
+									<Manual Value="0.5" />
+									<MidiControllerRange>
+										<Min Value="0" />
+										<Max Value="1" />
+									</MidiControllerRange>
+									<AutomationTarget Id="22287">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<ModulationTarget Id="22288">
+										<LockEnvelope Value="0" />
+									</ModulationTarget>
+								</Voice_Modulators_Envelope2_Values_Sustain>
+								<Voice_Modulators_Envelope2_Values_Final>
+									<LomId Value="0" />
+									<Manual Value="0" />
+									<MidiControllerRange>
+										<Min Value="0" />
+										<Max Value="1" />
+									</MidiControllerRange>
+									<AutomationTarget Id="22289">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<ModulationTarget Id="22290">
+										<LockEnvelope Value="0" />
+									</ModulationTarget>
+								</Voice_Modulators_Envelope2_Values_Final>
+								<Voice_Modulators_Envelope2_LoopMode>
+									<LomId Value="0" />
+									<Manual Value="0" />
+									<AutomationTarget Id="22291">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<MidiControllerRange>
+										<Min Value="0" />
+										<Max Value="2" />
+									</MidiControllerRange>
+								</Voice_Modulators_Envelope2_LoopMode>
+								<Voice_Modulators_Envelope3_Times_Attack>
+									<LomId Value="0" />
+									<Manual Value="0.001000000164" />
+									<MidiControllerRange>
+										<Min Value="0" />
+										<Max Value="20" />
+									</MidiControllerRange>
+									<AutomationTarget Id="22292">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<ModulationTarget Id="22293">
+										<LockEnvelope Value="0" />
+									</ModulationTarget>
+								</Voice_Modulators_Envelope3_Times_Attack>
+								<Voice_Modulators_Envelope3_Times_Decay>
+									<LomId Value="0" />
+									<Manual Value="0.5999999642" />
+									<MidiControllerRange>
+										<Min Value="0.001500000013" />
+										<Max Value="20" />
+									</MidiControllerRange>
+									<AutomationTarget Id="22294">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<ModulationTarget Id="22295">
+										<LockEnvelope Value="0" />
+									</ModulationTarget>
+								</Voice_Modulators_Envelope3_Times_Decay>
+								<Voice_Modulators_Envelope3_Times_Release>
+									<LomId Value="0" />
+									<Manual Value="0.5999999642" />
+									<MidiControllerRange>
+										<Min Value="0.001500000013" />
+										<Max Value="20" />
+									</MidiControllerRange>
+									<AutomationTarget Id="22296">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<ModulationTarget Id="22297">
+										<LockEnvelope Value="0" />
+									</ModulationTarget>
+								</Voice_Modulators_Envelope3_Times_Release>
+								<Voice_Modulators_Envelope3_Slopes_Attack>
+									<LomId Value="0" />
+									<Manual Value="0" />
+									<MidiControllerRange>
+										<Min Value="-1" />
+										<Max Value="1" />
+									</MidiControllerRange>
+									<AutomationTarget Id="22298">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<ModulationTarget Id="22299">
+										<LockEnvelope Value="0" />
+									</ModulationTarget>
+								</Voice_Modulators_Envelope3_Slopes_Attack>
+								<Voice_Modulators_Envelope3_Slopes_Decay>
+									<LomId Value="0" />
+									<Manual Value="0.5" />
+									<MidiControllerRange>
+										<Min Value="-1" />
+										<Max Value="1" />
+									</MidiControllerRange>
+									<AutomationTarget Id="22300">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<ModulationTarget Id="22301">
+										<LockEnvelope Value="0" />
+									</ModulationTarget>
+								</Voice_Modulators_Envelope3_Slopes_Decay>
+								<Voice_Modulators_Envelope3_Slopes_Release>
+									<LomId Value="0" />
+									<Manual Value="0.5" />
+									<MidiControllerRange>
+										<Min Value="-1" />
+										<Max Value="1" />
+									</MidiControllerRange>
+									<AutomationTarget Id="22302">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<ModulationTarget Id="22303">
+										<LockEnvelope Value="0" />
+									</ModulationTarget>
+								</Voice_Modulators_Envelope3_Slopes_Release>
+								<Voice_Modulators_Envelope3_Values_Initial>
+									<LomId Value="0" />
+									<Manual Value="0" />
+									<MidiControllerRange>
+										<Min Value="0" />
+										<Max Value="1" />
+									</MidiControllerRange>
+									<AutomationTarget Id="22304">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<ModulationTarget Id="22305">
+										<LockEnvelope Value="0" />
+									</ModulationTarget>
+								</Voice_Modulators_Envelope3_Values_Initial>
+								<Voice_Modulators_Envelope3_Values_Peak>
+									<LomId Value="0" />
+									<Manual Value="1" />
+									<MidiControllerRange>
+										<Min Value="0" />
+										<Max Value="1" />
+									</MidiControllerRange>
+									<AutomationTarget Id="22306">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<ModulationTarget Id="22307">
+										<LockEnvelope Value="0" />
+									</ModulationTarget>
+								</Voice_Modulators_Envelope3_Values_Peak>
+								<Voice_Modulators_Envelope3_Values_Sustain>
+									<LomId Value="0" />
+									<Manual Value="0.5" />
+									<MidiControllerRange>
+										<Min Value="0" />
+										<Max Value="1" />
+									</MidiControllerRange>
+									<AutomationTarget Id="22308">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<ModulationTarget Id="22309">
+										<LockEnvelope Value="0" />
+									</ModulationTarget>
+								</Voice_Modulators_Envelope3_Values_Sustain>
+								<Voice_Modulators_Envelope3_Values_Final>
+									<LomId Value="0" />
+									<Manual Value="0" />
+									<MidiControllerRange>
+										<Min Value="0" />
+										<Max Value="1" />
+									</MidiControllerRange>
+									<AutomationTarget Id="22310">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<ModulationTarget Id="22311">
+										<LockEnvelope Value="0" />
+									</ModulationTarget>
+								</Voice_Modulators_Envelope3_Values_Final>
+								<Voice_Modulators_Envelope3_LoopMode>
+									<LomId Value="0" />
+									<Manual Value="0" />
+									<AutomationTarget Id="22312">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<MidiControllerRange>
+										<Min Value="0" />
+										<Max Value="2" />
+									</MidiControllerRange>
+								</Voice_Modulators_Envelope3_LoopMode>
+								<Voice_Modulators_Lfo1_Retrigger>
+									<LomId Value="0" />
+									<Manual Value="true" />
+									<AutomationTarget Id="22313">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<MidiCCOnOffThresholds>
+										<Min Value="64" />
+										<Max Value="127" />
+									</MidiCCOnOffThresholds>
+								</Voice_Modulators_Lfo1_Retrigger>
+								<Voice_Modulators_Lfo1_Shape_Type>
+									<LomId Value="0" />
+									<Manual Value="0" />
+									<AutomationTarget Id="22314">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<MidiControllerRange>
+										<Min Value="0" />
+										<Max Value="4" />
+									</MidiControllerRange>
+								</Voice_Modulators_Lfo1_Shape_Type>
+								<Voice_Modulators_Lfo1_Shape_Amount>
+									<LomId Value="0" />
+									<Manual Value="1" />
+									<MidiControllerRange>
+										<Min Value="0" />
+										<Max Value="1" />
+									</MidiControllerRange>
+									<AutomationTarget Id="22315">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<ModulationTarget Id="22316">
+										<LockEnvelope Value="0" />
+									</ModulationTarget>
+								</Voice_Modulators_Lfo1_Shape_Amount>
+								<Voice_Modulators_Lfo1_Shape_Shaping>
+									<LomId Value="0" />
+									<Manual Value="0" />
+									<MidiControllerRange>
+										<Min Value="-1" />
+										<Max Value="1" />
+									</MidiControllerRange>
+									<AutomationTarget Id="22317">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<ModulationTarget Id="22318">
+										<LockEnvelope Value="0" />
+									</ModulationTarget>
+								</Voice_Modulators_Lfo1_Shape_Shaping>
+								<Voice_Modulators_Lfo1_Shape_PhaseOffset>
+									<LomId Value="0" />
+									<Manual Value="0" />
+									<MidiControllerRange>
+										<Min Value="0" />
+										<Max Value="360" />
+									</MidiControllerRange>
+									<AutomationTarget Id="22319">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<ModulationTarget Id="22320">
+										<LockEnvelope Value="0" />
+									</ModulationTarget>
+								</Voice_Modulators_Lfo1_Shape_PhaseOffset>
+								<Voice_Modulators_Lfo1_Time_Sync>
+									<LomId Value="0" />
+									<Manual Value="0" />
+									<AutomationTarget Id="22321">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<MidiControllerRange>
+										<Min Value="0" />
+										<Max Value="1" />
+									</MidiControllerRange>
+								</Voice_Modulators_Lfo1_Time_Sync>
+								<Voice_Modulators_Lfo1_Time_Rate>
+									<LomId Value="0" />
+									<Manual Value="0.9999998808" />
+									<MidiControllerRange>
+										<Min Value="0.009999999776" />
+										<Max Value="30" />
+									</MidiControllerRange>
+									<AutomationTarget Id="22322">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<ModulationTarget Id="22323">
+										<LockEnvelope Value="0" />
+									</ModulationTarget>
+								</Voice_Modulators_Lfo1_Time_Rate>
+								<Voice_Modulators_Lfo1_Time_SyncedRate>
+									<LomId Value="0" />
+									<Manual Value="15" />
+									<MidiControllerRange>
+										<Min Value="0" />
+										<Max Value="21" />
+									</MidiControllerRange>
+									<AutomationTarget Id="22324">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<ModulationTarget Id="22325">
+										<LockEnvelope Value="0" />
+									</ModulationTarget>
+								</Voice_Modulators_Lfo1_Time_SyncedRate>
+								<Voice_Modulators_Lfo1_Time_AttackTime>
+									<LomId Value="0" />
+									<Manual Value="0" />
+									<MidiControllerRange>
+										<Min Value="0" />
+										<Max Value="20" />
+									</MidiControllerRange>
+									<AutomationTarget Id="22326">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<ModulationTarget Id="22327">
+										<LockEnvelope Value="0" />
+									</ModulationTarget>
+								</Voice_Modulators_Lfo1_Time_AttackTime>
+								<Voice_Modulators_Lfo2_Retrigger>
+									<LomId Value="0" />
+									<Manual Value="true" />
+									<AutomationTarget Id="22328">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<MidiCCOnOffThresholds>
+										<Min Value="64" />
+										<Max Value="127" />
+									</MidiCCOnOffThresholds>
+								</Voice_Modulators_Lfo2_Retrigger>
+								<Voice_Modulators_Lfo2_Shape_Type>
+									<LomId Value="0" />
+									<Manual Value="0" />
+									<AutomationTarget Id="22329">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<MidiControllerRange>
+										<Min Value="0" />
+										<Max Value="4" />
+									</MidiControllerRange>
+								</Voice_Modulators_Lfo2_Shape_Type>
+								<Voice_Modulators_Lfo2_Shape_Amount>
+									<LomId Value="0" />
+									<Manual Value="1" />
+									<MidiControllerRange>
+										<Min Value="0" />
+										<Max Value="1" />
+									</MidiControllerRange>
+									<AutomationTarget Id="22330">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<ModulationTarget Id="22331">
+										<LockEnvelope Value="0" />
+									</ModulationTarget>
+								</Voice_Modulators_Lfo2_Shape_Amount>
+								<Voice_Modulators_Lfo2_Shape_Shaping>
+									<LomId Value="0" />
+									<Manual Value="0" />
+									<MidiControllerRange>
+										<Min Value="-1" />
+										<Max Value="1" />
+									</MidiControllerRange>
+									<AutomationTarget Id="22332">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<ModulationTarget Id="22333">
+										<LockEnvelope Value="0" />
+									</ModulationTarget>
+								</Voice_Modulators_Lfo2_Shape_Shaping>
+								<Voice_Modulators_Lfo2_Shape_PhaseOffset>
+									<LomId Value="0" />
+									<Manual Value="0" />
+									<MidiControllerRange>
+										<Min Value="0" />
+										<Max Value="360" />
+									</MidiControllerRange>
+									<AutomationTarget Id="22334">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<ModulationTarget Id="22335">
+										<LockEnvelope Value="0" />
+									</ModulationTarget>
+								</Voice_Modulators_Lfo2_Shape_PhaseOffset>
+								<Voice_Modulators_Lfo2_Time_Sync>
+									<LomId Value="0" />
+									<Manual Value="0" />
+									<AutomationTarget Id="22336">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<MidiControllerRange>
+										<Min Value="0" />
+										<Max Value="1" />
+									</MidiControllerRange>
+								</Voice_Modulators_Lfo2_Time_Sync>
+								<Voice_Modulators_Lfo2_Time_Rate>
+									<LomId Value="0" />
+									<Manual Value="0.9999998808" />
+									<MidiControllerRange>
+										<Min Value="0.009999999776" />
+										<Max Value="30" />
+									</MidiControllerRange>
+									<AutomationTarget Id="22337">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<ModulationTarget Id="22338">
+										<LockEnvelope Value="0" />
+									</ModulationTarget>
+								</Voice_Modulators_Lfo2_Time_Rate>
+								<Voice_Modulators_Lfo2_Time_SyncedRate>
+									<LomId Value="0" />
+									<Manual Value="15" />
+									<MidiControllerRange>
+										<Min Value="0" />
+										<Max Value="21" />
+									</MidiControllerRange>
+									<AutomationTarget Id="22339">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<ModulationTarget Id="22340">
+										<LockEnvelope Value="0" />
+									</ModulationTarget>
+								</Voice_Modulators_Lfo2_Time_SyncedRate>
+								<Voice_Modulators_Lfo2_Time_AttackTime>
+									<LomId Value="0" />
+									<Manual Value="0" />
+									<MidiControllerRange>
+										<Min Value="0" />
+										<Max Value="20" />
+									</MidiControllerRange>
+									<AutomationTarget Id="22341">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<ModulationTarget Id="22342">
+										<LockEnvelope Value="0" />
+									</ModulationTarget>
+								</Voice_Modulators_Lfo2_Time_AttackTime>
+								<Voice_Modulators_TimeScale>
+									<LomId Value="0" />
+									<Manual Value="0" />
+									<MidiControllerRange>
+										<Min Value="-1" />
+										<Max Value="1" />
+									</MidiControllerRange>
+									<AutomationTarget Id="22343">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<ModulationTarget Id="22344">
+										<LockEnvelope Value="0" />
+									</ModulationTarget>
+								</Voice_Modulators_TimeScale>
+								<Voice_Modulators_Amount>
+									<LomId Value="0" />
+									<Manual Value="1" />
+									<MidiControllerRange>
+										<Min Value="0" />
+										<Max Value="2" />
+									</MidiControllerRange>
+									<AutomationTarget Id="22345">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<ModulationTarget Id="22346">
+										<LockEnvelope Value="0" />
+									</ModulationTarget>
+								</Voice_Modulators_Amount>
+								<Voice_Unison_Mode Value="0" />
+								<Voice_Unison_VoiceCount Value="3" />
+								<Voice_Unison_Amount>
+									<LomId Value="0" />
+									<Manual Value="0.3000000119" />
+									<MidiControllerRange>
+										<Min Value="0" />
+										<Max Value="1" />
+									</MidiControllerRange>
+									<AutomationTarget Id="22347">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<ModulationTarget Id="22348">
+										<LockEnvelope Value="0" />
+									</ModulationTarget>
+								</Voice_Unison_Amount>
+								<Voice_Global_Transpose>
+									<LomId Value="0" />
+									<Manual Value="0" />
+									<MidiControllerRange>
+										<Min Value="-48" />
+										<Max Value="48" />
+									</MidiControllerRange>
+									<AutomationTarget Id="22349">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<ModulationTarget Id="22350">
+										<LockEnvelope Value="0" />
+									</ModulationTarget>
+								</Voice_Global_Transpose>
+								<Voice_Global_FilterRouting Value="0" />
+								<Voice_Global_Glide>
+									<LomId Value="0" />
+									<Manual Value="0" />
+									<MidiControllerRange>
+										<Min Value="0" />
+										<Max Value="20" />
+									</MidiControllerRange>
+									<AutomationTarget Id="22351">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<ModulationTarget Id="22352">
+										<LockEnvelope Value="0" />
+									</ModulationTarget>
+								</Voice_Global_Glide>
+								<Volume>
+									<LomId Value="0" />
+									<Manual Value="0.3548134267" />
+									<MidiControllerRange>
+										<Min Value="0" />
+										<Max Value="1" />
+									</MidiControllerRange>
+									<AutomationTarget Id="22353">
+										<LockEnvelope Value="0" />
+									</AutomationTarget>
+									<ModulationTarget Id="22354">
+										<LockEnvelope Value="0" />
+									</ModulationTarget>
+								</Volume>
+								<MonoPoly Value="1" />
+								<PolyVoices Value="6" />
+								<HiQ Value="false" />
+								<ModulationConnections>
+									<ModulationConnectionsForInstrumentVector Id="0" TargetId="Voice_Oscillator1_Pitch_PitchModulation">
+										<TargetName Value="Osc 1 Pitch" />
+										<ModulationAmounts.0 Value="0" />
+										<ModulationAmounts.1 Value="0" />
+										<ModulationAmounts.2 Value="0" />
+										<ModulationAmounts.3 Value="0" />
+										<ModulationAmounts.4 Value="0" />
+										<ModulationAmounts.5 Value="0" />
+										<ModulationAmounts.6 Value="0" />
+										<ModulationAmounts.7 Value="0" />
+										<ModulationAmounts.8 Value="0" />
+										<ModulationAmounts.9 Value="0" />
+										<ModulationAmounts.10 Value="0" />
+										<ModulationAmounts.11 Value="0" />
+										<ModulationAmounts.12 Value="0" />
+									</ModulationConnectionsForInstrumentVector>
+									<ModulationConnectionsForInstrumentVector Id="1" TargetId="Voice_Oscillator1_Wavetables_WavePosition">
+										<TargetName Value="Osc 1 Pos" />
+										<ModulationAmounts.0 Value="0" />
+										<ModulationAmounts.1 Value="0" />
+										<ModulationAmounts.2 Value="0" />
+										<ModulationAmounts.3 Value="0" />
+										<ModulationAmounts.4 Value="0" />
+										<ModulationAmounts.5 Value="0" />
+										<ModulationAmounts.6 Value="0" />
+										<ModulationAmounts.7 Value="0" />
+										<ModulationAmounts.8 Value="0" />
+										<ModulationAmounts.9 Value="1" />
+										<ModulationAmounts.10 Value="0" />
+										<ModulationAmounts.11 Value="0" />
+										<ModulationAmounts.12 Value="0.3300000131" />
+									</ModulationConnectionsForInstrumentVector>
+									<ModulationConnectionsForInstrumentVector Id="2" TargetId="Voice_Oscillator1_Effects_Effect1">
+										<TargetName Value="Osc 1 Warp" />
+										<ModulationAmounts.0 Value="0" />
+										<ModulationAmounts.1 Value="0" />
+										<ModulationAmounts.2 Value="0" />
+										<ModulationAmounts.3 Value="0" />
+										<ModulationAmounts.4 Value="0" />
+										<ModulationAmounts.5 Value="0" />
+										<ModulationAmounts.6 Value="0" />
+										<ModulationAmounts.7 Value="0" />
+										<ModulationAmounts.8 Value="0.0700000003" />
+										<ModulationAmounts.9 Value="0" />
+										<ModulationAmounts.10 Value="0" />
+										<ModulationAmounts.11 Value="0" />
+										<ModulationAmounts.12 Value="0" />
+									</ModulationConnectionsForInstrumentVector>
+									<ModulationConnectionsForInstrumentVector Id="3" TargetId="Voice_Oscillator1_Effects_Effect2">
+										<TargetName Value="Osc 1 Fold" />
+										<ModulationAmounts.0 Value="0" />
+										<ModulationAmounts.1 Value="0" />
+										<ModulationAmounts.2 Value="0" />
+										<ModulationAmounts.3 Value="0" />
+										<ModulationAmounts.4 Value="0" />
+										<ModulationAmounts.5 Value="0" />
+										<ModulationAmounts.6 Value="0" />
+										<ModulationAmounts.7 Value="0" />
+										<ModulationAmounts.8 Value="0" />
+										<ModulationAmounts.9 Value="0" />
+										<ModulationAmounts.10 Value="0" />
+										<ModulationAmounts.11 Value="0" />
+										<ModulationAmounts.12 Value="0" />
+									</ModulationConnectionsForInstrumentVector>
+									<ModulationConnectionsForInstrumentVector Id="4" TargetId="Voice_Oscillator1_Pan">
+										<TargetName Value="Osc 1 Pan" />
+										<ModulationAmounts.0 Value="0" />
+										<ModulationAmounts.1 Value="0" />
+										<ModulationAmounts.2 Value="0" />
+										<ModulationAmounts.3 Value="0" />
+										<ModulationAmounts.4 Value="0" />
+										<ModulationAmounts.5 Value="0" />
+										<ModulationAmounts.6 Value="0" />
+										<ModulationAmounts.7 Value="0" />
+										<ModulationAmounts.8 Value="0" />
+										<ModulationAmounts.9 Value="0" />
+										<ModulationAmounts.10 Value="0" />
+										<ModulationAmounts.11 Value="0" />
+										<ModulationAmounts.12 Value="0" />
+									</ModulationConnectionsForInstrumentVector>
+									<ModulationConnectionsForInstrumentVector Id="5" TargetId="Voice_Oscillator1_Gain">
+										<TargetName Value="Osc 1 Gain" />
+										<ModulationAmounts.0 Value="0" />
+										<ModulationAmounts.1 Value="0" />
+										<ModulationAmounts.2 Value="0" />
+										<ModulationAmounts.3 Value="0" />
+										<ModulationAmounts.4 Value="0" />
+										<ModulationAmounts.5 Value="0" />
+										<ModulationAmounts.6 Value="0" />
+										<ModulationAmounts.7 Value="0" />
+										<ModulationAmounts.8 Value="0" />
+										<ModulationAmounts.9 Value="0" />
+										<ModulationAmounts.10 Value="0" />
+										<ModulationAmounts.11 Value="0" />
+										<ModulationAmounts.12 Value="0" />
+									</ModulationConnectionsForInstrumentVector>
+									<ModulationConnectionsForInstrumentVector Id="6" TargetId="Voice_Oscillator2_Pitch_PitchModulation">
+										<TargetName Value="Osc 2 Pitch" />
+										<ModulationAmounts.0 Value="0" />
+										<ModulationAmounts.1 Value="0" />
+										<ModulationAmounts.2 Value="0" />
+										<ModulationAmounts.3 Value="0" />
+										<ModulationAmounts.4 Value="0" />
+										<ModulationAmounts.5 Value="0" />
+										<ModulationAmounts.6 Value="0" />
+										<ModulationAmounts.7 Value="0" />
+										<ModulationAmounts.8 Value="0" />
+										<ModulationAmounts.9 Value="0" />
+										<ModulationAmounts.10 Value="0" />
+										<ModulationAmounts.11 Value="0" />
+										<ModulationAmounts.12 Value="0" />
+									</ModulationConnectionsForInstrumentVector>
+									<ModulationConnectionsForInstrumentVector Id="7" TargetId="Voice_Oscillator2_Wavetables_WavePosition">
+										<TargetName Value="Osc 2 Pos" />
+										<ModulationAmounts.0 Value="0" />
+										<ModulationAmounts.1 Value="0" />
+										<ModulationAmounts.2 Value="0" />
+										<ModulationAmounts.3 Value="0" />
+										<ModulationAmounts.4 Value="0" />
+										<ModulationAmounts.5 Value="0" />
+										<ModulationAmounts.6 Value="0" />
+										<ModulationAmounts.7 Value="0" />
+										<ModulationAmounts.8 Value="0" />
+										<ModulationAmounts.9 Value="0" />
+										<ModulationAmounts.10 Value="0" />
+										<ModulationAmounts.11 Value="0" />
+										<ModulationAmounts.12 Value="0" />
+									</ModulationConnectionsForInstrumentVector>
+									<ModulationConnectionsForInstrumentVector Id="8" TargetId="Voice_Oscillator2_Effects_Effect1">
+										<TargetName Value="Osc 2 FX 1" />
+										<ModulationAmounts.0 Value="0" />
+										<ModulationAmounts.1 Value="0" />
+										<ModulationAmounts.2 Value="0" />
+										<ModulationAmounts.3 Value="0" />
+										<ModulationAmounts.4 Value="0" />
+										<ModulationAmounts.5 Value="0" />
+										<ModulationAmounts.6 Value="0" />
+										<ModulationAmounts.7 Value="0" />
+										<ModulationAmounts.8 Value="0" />
+										<ModulationAmounts.9 Value="0" />
+										<ModulationAmounts.10 Value="0" />
+										<ModulationAmounts.11 Value="0" />
+										<ModulationAmounts.12 Value="0" />
+									</ModulationConnectionsForInstrumentVector>
+									<ModulationConnectionsForInstrumentVector Id="9" TargetId="Voice_Oscillator2_Effects_Effect2">
+										<TargetName Value="Osc 2 FX 2" />
+										<ModulationAmounts.0 Value="0" />
+										<ModulationAmounts.1 Value="0" />
+										<ModulationAmounts.2 Value="0" />
+										<ModulationAmounts.3 Value="0" />
+										<ModulationAmounts.4 Value="0" />
+										<ModulationAmounts.5 Value="0" />
+										<ModulationAmounts.6 Value="0" />
+										<ModulationAmounts.7 Value="0" />
+										<ModulationAmounts.8 Value="0" />
+										<ModulationAmounts.9 Value="0" />
+										<ModulationAmounts.10 Value="0" />
+										<ModulationAmounts.11 Value="0" />
+										<ModulationAmounts.12 Value="0" />
+									</ModulationConnectionsForInstrumentVector>
+									<ModulationConnectionsForInstrumentVector Id="10" TargetId="Voice_Oscillator2_Pan">
+										<TargetName Value="Osc 2 Pan" />
+										<ModulationAmounts.0 Value="0" />
+										<ModulationAmounts.1 Value="0" />
+										<ModulationAmounts.2 Value="0" />
+										<ModulationAmounts.3 Value="0" />
+										<ModulationAmounts.4 Value="0" />
+										<ModulationAmounts.5 Value="0" />
+										<ModulationAmounts.6 Value="0" />
+										<ModulationAmounts.7 Value="0" />
+										<ModulationAmounts.8 Value="0" />
+										<ModulationAmounts.9 Value="0" />
+										<ModulationAmounts.10 Value="0" />
+										<ModulationAmounts.11 Value="0" />
+										<ModulationAmounts.12 Value="0" />
+									</ModulationConnectionsForInstrumentVector>
+									<ModulationConnectionsForInstrumentVector Id="11" TargetId="Voice_Oscillator2_Gain">
+										<TargetName Value="Osc 2 Gain" />
+										<ModulationAmounts.0 Value="0" />
+										<ModulationAmounts.1 Value="0" />
+										<ModulationAmounts.2 Value="0" />
+										<ModulationAmounts.3 Value="0" />
+										<ModulationAmounts.4 Value="0" />
+										<ModulationAmounts.5 Value="0" />
+										<ModulationAmounts.6 Value="0" />
+										<ModulationAmounts.7 Value="0" />
+										<ModulationAmounts.8 Value="0" />
+										<ModulationAmounts.9 Value="0" />
+										<ModulationAmounts.10 Value="0" />
+										<ModulationAmounts.11 Value="0" />
+										<ModulationAmounts.12 Value="0" />
+									</ModulationConnectionsForInstrumentVector>
+									<ModulationConnectionsForInstrumentVector Id="12" TargetId="Voice_SubOscillator_Tone">
+										<TargetName Value="Sub Tone" />
+										<ModulationAmounts.0 Value="0" />
+										<ModulationAmounts.1 Value="0" />
+										<ModulationAmounts.2 Value="0" />
+										<ModulationAmounts.3 Value="0" />
+										<ModulationAmounts.4 Value="0" />
+										<ModulationAmounts.5 Value="0" />
+										<ModulationAmounts.6 Value="0" />
+										<ModulationAmounts.7 Value="0" />
+										<ModulationAmounts.8 Value="0" />
+										<ModulationAmounts.9 Value="0" />
+										<ModulationAmounts.10 Value="0" />
+										<ModulationAmounts.11 Value="0" />
+										<ModulationAmounts.12 Value="0" />
+									</ModulationConnectionsForInstrumentVector>
+									<ModulationConnectionsForInstrumentVector Id="13" TargetId="Voice_SubOscillator_Gain">
+										<TargetName Value="Sub Gain" />
+										<ModulationAmounts.0 Value="0" />
+										<ModulationAmounts.1 Value="0" />
+										<ModulationAmounts.2 Value="0" />
+										<ModulationAmounts.3 Value="0" />
+										<ModulationAmounts.4 Value="0" />
+										<ModulationAmounts.5 Value="0" />
+										<ModulationAmounts.6 Value="0" />
+										<ModulationAmounts.7 Value="0" />
+										<ModulationAmounts.8 Value="0" />
+										<ModulationAmounts.9 Value="0" />
+										<ModulationAmounts.10 Value="0" />
+										<ModulationAmounts.11 Value="0" />
+										<ModulationAmounts.12 Value="0" />
+									</ModulationConnectionsForInstrumentVector>
+									<ModulationConnectionsForInstrumentVector Id="14" TargetId="Voice_Filter1_Frequency">
+										<TargetName Value="Flt 1 Freq" />
+										<ModulationAmounts.0 Value="0" />
+										<ModulationAmounts.1 Value="0" />
+										<ModulationAmounts.2 Value="0" />
+										<ModulationAmounts.3 Value="0" />
+										<ModulationAmounts.4 Value="0" />
+										<ModulationAmounts.5 Value="0" />
+										<ModulationAmounts.6 Value="0" />
+										<ModulationAmounts.7 Value="0" />
+										<ModulationAmounts.8 Value="0" />
+										<ModulationAmounts.9 Value="0" />
+										<ModulationAmounts.10 Value="0" />
+										<ModulationAmounts.11 Value="0" />
+										<ModulationAmounts.12 Value="0" />
+									</ModulationConnectionsForInstrumentVector>
+									<ModulationConnectionsForInstrumentVector Id="15" TargetId="Voice_Filter1_Resonance">
+										<TargetName Value="Flt 1 Res" />
+										<ModulationAmounts.0 Value="0" />
+										<ModulationAmounts.1 Value="0" />
+										<ModulationAmounts.2 Value="0" />
+										<ModulationAmounts.3 Value="0" />
+										<ModulationAmounts.4 Value="0" />
+										<ModulationAmounts.5 Value="0" />
+										<ModulationAmounts.6 Value="0" />
+										<ModulationAmounts.7 Value="0" />
+										<ModulationAmounts.8 Value="0" />
+										<ModulationAmounts.9 Value="0" />
+										<ModulationAmounts.10 Value="0" />
+										<ModulationAmounts.11 Value="0" />
+										<ModulationAmounts.12 Value="0" />
+									</ModulationConnectionsForInstrumentVector>
+									<ModulationConnectionsForInstrumentVector Id="16" TargetId="Voice_Filter1_Drive">
+										<TargetName Value="Flt 1 Drive" />
+										<ModulationAmounts.0 Value="0" />
+										<ModulationAmounts.1 Value="0" />
+										<ModulationAmounts.2 Value="0" />
+										<ModulationAmounts.3 Value="0" />
+										<ModulationAmounts.4 Value="0" />
+										<ModulationAmounts.5 Value="0" />
+										<ModulationAmounts.6 Value="0" />
+										<ModulationAmounts.7 Value="0" />
+										<ModulationAmounts.8 Value="0" />
+										<ModulationAmounts.9 Value="0" />
+										<ModulationAmounts.10 Value="0" />
+										<ModulationAmounts.11 Value="0" />
+										<ModulationAmounts.12 Value="0" />
+									</ModulationConnectionsForInstrumentVector>
+									<ModulationConnectionsForInstrumentVector Id="17" TargetId="Voice_Filter1_Morph">
+										<TargetName Value="Flt 1 Morph" />
+										<ModulationAmounts.0 Value="0" />
+										<ModulationAmounts.1 Value="0" />
+										<ModulationAmounts.2 Value="0" />
+										<ModulationAmounts.3 Value="0" />
+										<ModulationAmounts.4 Value="0" />
+										<ModulationAmounts.5 Value="0" />
+										<ModulationAmounts.6 Value="0" />
+										<ModulationAmounts.7 Value="0" />
+										<ModulationAmounts.8 Value="0" />
+										<ModulationAmounts.9 Value="0" />
+										<ModulationAmounts.10 Value="0" />
+										<ModulationAmounts.11 Value="0" />
+										<ModulationAmounts.12 Value="0" />
+									</ModulationConnectionsForInstrumentVector>
+									<ModulationConnectionsForInstrumentVector Id="18" TargetId="Voice_Filter2_Frequency">
+										<TargetName Value="Flt 2 Freq" />
+										<ModulationAmounts.0 Value="0" />
+										<ModulationAmounts.1 Value="0" />
+										<ModulationAmounts.2 Value="0" />
+										<ModulationAmounts.3 Value="0" />
+										<ModulationAmounts.4 Value="0" />
+										<ModulationAmounts.5 Value="0" />
+										<ModulationAmounts.6 Value="0" />
+										<ModulationAmounts.7 Value="0" />
+										<ModulationAmounts.8 Value="0" />
+										<ModulationAmounts.9 Value="0" />
+										<ModulationAmounts.10 Value="0" />
+										<ModulationAmounts.11 Value="0" />
+										<ModulationAmounts.12 Value="0" />
+									</ModulationConnectionsForInstrumentVector>
+									<ModulationConnectionsForInstrumentVector Id="19" TargetId="Voice_Filter2_Resonance">
+										<TargetName Value="Flt 2 Res" />
+										<ModulationAmounts.0 Value="0" />
+										<ModulationAmounts.1 Value="0" />
+										<ModulationAmounts.2 Value="0" />
+										<ModulationAmounts.3 Value="0" />
+										<ModulationAmounts.4 Value="0" />
+										<ModulationAmounts.5 Value="0" />
+										<ModulationAmounts.6 Value="0" />
+										<ModulationAmounts.7 Value="0" />
+										<ModulationAmounts.8 Value="0" />
+										<ModulationAmounts.9 Value="0" />
+										<ModulationAmounts.10 Value="0" />
+										<ModulationAmounts.11 Value="0" />
+										<ModulationAmounts.12 Value="0" />
+									</ModulationConnectionsForInstrumentVector>
+									<ModulationConnectionsForInstrumentVector Id="20" TargetId="Voice_Filter2_Drive">
+										<TargetName Value="Flt 2 Drive" />
+										<ModulationAmounts.0 Value="0" />
+										<ModulationAmounts.1 Value="0" />
+										<ModulationAmounts.2 Value="0" />
+										<ModulationAmounts.3 Value="0" />
+										<ModulationAmounts.4 Value="0" />
+										<ModulationAmounts.5 Value="0" />
+										<ModulationAmounts.6 Value="0" />
+										<ModulationAmounts.7 Value="0" />
+										<ModulationAmounts.8 Value="0" />
+										<ModulationAmounts.9 Value="0" />
+										<ModulationAmounts.10 Value="0" />
+										<ModulationAmounts.11 Value="0" />
+										<ModulationAmounts.12 Value="0" />
+									</ModulationConnectionsForInstrumentVector>
+									<ModulationConnectionsForInstrumentVector Id="21" TargetId="Voice_Filter2_Morph">
+										<TargetName Value="Flt 2 Morph" />
+										<ModulationAmounts.0 Value="0" />
+										<ModulationAmounts.1 Value="0" />
+										<ModulationAmounts.2 Value="0" />
+										<ModulationAmounts.3 Value="0" />
+										<ModulationAmounts.4 Value="0" />
+										<ModulationAmounts.5 Value="0" />
+										<ModulationAmounts.6 Value="0" />
+										<ModulationAmounts.7 Value="0" />
+										<ModulationAmounts.8 Value="0" />
+										<ModulationAmounts.9 Value="0" />
+										<ModulationAmounts.10 Value="0" />
+										<ModulationAmounts.11 Value="0" />
+										<ModulationAmounts.12 Value="0" />
+									</ModulationConnectionsForInstrumentVector>
+									<ModulationConnectionsForInstrumentVector Id="22" TargetId="Voice_Modulators_AmpEnvelope_Times_Attack">
+										<TargetName Value="Amp Attack" />
+										<ModulationAmounts.0 Value="0" />
+										<ModulationAmounts.1 Value="0" />
+										<ModulationAmounts.2 Value="0" />
+										<ModulationAmounts.3 Value="0" />
+										<ModulationAmounts.4 Value="0" />
+										<ModulationAmounts.5 Value="0" />
+										<ModulationAmounts.6 Value="0" />
+										<ModulationAmounts.7 Value="0" />
+										<ModulationAmounts.8 Value="0" />
+										<ModulationAmounts.9 Value="0" />
+										<ModulationAmounts.10 Value="0" />
+										<ModulationAmounts.11 Value="0" />
+										<ModulationAmounts.12 Value="0" />
+									</ModulationConnectionsForInstrumentVector>
+									<ModulationConnectionsForInstrumentVector Id="23" TargetId="Voice_Modulators_AmpEnvelope_Times_Decay">
+										<TargetName Value="Amp Decay" />
+										<ModulationAmounts.0 Value="0" />
+										<ModulationAmounts.1 Value="0" />
+										<ModulationAmounts.2 Value="0" />
+										<ModulationAmounts.3 Value="0" />
+										<ModulationAmounts.4 Value="0" />
+										<ModulationAmounts.5 Value="0" />
+										<ModulationAmounts.6 Value="0" />
+										<ModulationAmounts.7 Value="0" />
+										<ModulationAmounts.8 Value="0" />
+										<ModulationAmounts.9 Value="0" />
+										<ModulationAmounts.10 Value="0" />
+										<ModulationAmounts.11 Value="0" />
+										<ModulationAmounts.12 Value="0" />
+									</ModulationConnectionsForInstrumentVector>
+									<ModulationConnectionsForInstrumentVector Id="24" TargetId="Voice_Modulators_AmpEnvelope_Times_Release">
+										<TargetName Value="Amp Release" />
+										<ModulationAmounts.0 Value="0" />
+										<ModulationAmounts.1 Value="0" />
+										<ModulationAmounts.2 Value="0" />
+										<ModulationAmounts.3 Value="0" />
+										<ModulationAmounts.4 Value="0" />
+										<ModulationAmounts.5 Value="0" />
+										<ModulationAmounts.6 Value="0" />
+										<ModulationAmounts.7 Value="0" />
+										<ModulationAmounts.8 Value="0" />
+										<ModulationAmounts.9 Value="0" />
+										<ModulationAmounts.10 Value="0" />
+										<ModulationAmounts.11 Value="0" />
+										<ModulationAmounts.12 Value="0" />
+									</ModulationConnectionsForInstrumentVector>
+									<ModulationConnectionsForInstrumentVector Id="25" TargetId="Voice_Modulators_AmpEnvelope_Sustain">
+										<TargetName Value="Amp Sustain" />
+										<ModulationAmounts.0 Value="0" />
+										<ModulationAmounts.1 Value="0" />
+										<ModulationAmounts.2 Value="0" />
+										<ModulationAmounts.3 Value="0" />
+										<ModulationAmounts.4 Value="0" />
+										<ModulationAmounts.5 Value="0" />
+										<ModulationAmounts.6 Value="0" />
+										<ModulationAmounts.7 Value="0" />
+										<ModulationAmounts.8 Value="0" />
+										<ModulationAmounts.9 Value="0" />
+										<ModulationAmounts.10 Value="0" />
+										<ModulationAmounts.11 Value="0" />
+										<ModulationAmounts.12 Value="0" />
+									</ModulationConnectionsForInstrumentVector>
+									<ModulationConnectionsForInstrumentVector Id="26" TargetId="Voice_Modulators_Envelope2_Times_Attack">
+										<TargetName Value="Env 2 Attack" />
+										<ModulationAmounts.0 Value="0" />
+										<ModulationAmounts.1 Value="0" />
+										<ModulationAmounts.2 Value="0" />
+										<ModulationAmounts.3 Value="0" />
+										<ModulationAmounts.4 Value="0" />
+										<ModulationAmounts.5 Value="0" />
+										<ModulationAmounts.6 Value="0" />
+										<ModulationAmounts.7 Value="0" />
+										<ModulationAmounts.8 Value="0" />
+										<ModulationAmounts.9 Value="0" />
+										<ModulationAmounts.10 Value="0" />
+										<ModulationAmounts.11 Value="0" />
+										<ModulationAmounts.12 Value="0" />
+									</ModulationConnectionsForInstrumentVector>
+									<ModulationConnectionsForInstrumentVector Id="27" TargetId="Voice_Modulators_Envelope2_Times_Decay">
+										<TargetName Value="Env 2 Decay" />
+										<ModulationAmounts.0 Value="0" />
+										<ModulationAmounts.1 Value="0" />
+										<ModulationAmounts.2 Value="0" />
+										<ModulationAmounts.3 Value="0" />
+										<ModulationAmounts.4 Value="0" />
+										<ModulationAmounts.5 Value="0" />
+										<ModulationAmounts.6 Value="0" />
+										<ModulationAmounts.7 Value="0" />
+										<ModulationAmounts.8 Value="0" />
+										<ModulationAmounts.9 Value="0" />
+										<ModulationAmounts.10 Value="0" />
+										<ModulationAmounts.11 Value="0" />
+										<ModulationAmounts.12 Value="0" />
+									</ModulationConnectionsForInstrumentVector>
+									<ModulationConnectionsForInstrumentVector Id="28" TargetId="Voice_Modulators_Envelope2_Times_Release">
+										<TargetName Value="Env 2 Release" />
+										<ModulationAmounts.0 Value="0" />
+										<ModulationAmounts.1 Value="0" />
+										<ModulationAmounts.2 Value="0" />
+										<ModulationAmounts.3 Value="0" />
+										<ModulationAmounts.4 Value="0" />
+										<ModulationAmounts.5 Value="0" />
+										<ModulationAmounts.6 Value="0" />
+										<ModulationAmounts.7 Value="0" />
+										<ModulationAmounts.8 Value="0" />
+										<ModulationAmounts.9 Value="0" />
+										<ModulationAmounts.10 Value="0" />
+										<ModulationAmounts.11 Value="0" />
+										<ModulationAmounts.12 Value="0" />
+									</ModulationConnectionsForInstrumentVector>
+									<ModulationConnectionsForInstrumentVector Id="29" TargetId="Voice_Modulators_Envelope2_Values_Initial">
+										<TargetName Value="Env 2 Initial" />
+										<ModulationAmounts.0 Value="0" />
+										<ModulationAmounts.1 Value="0" />
+										<ModulationAmounts.2 Value="0" />
+										<ModulationAmounts.3 Value="0" />
+										<ModulationAmounts.4 Value="0" />
+										<ModulationAmounts.5 Value="0" />
+										<ModulationAmounts.6 Value="0" />
+										<ModulationAmounts.7 Value="0" />
+										<ModulationAmounts.8 Value="0" />
+										<ModulationAmounts.9 Value="0" />
+										<ModulationAmounts.10 Value="0" />
+										<ModulationAmounts.11 Value="0" />
+										<ModulationAmounts.12 Value="0" />
+									</ModulationConnectionsForInstrumentVector>
+									<ModulationConnectionsForInstrumentVector Id="30" TargetId="Voice_Modulators_Envelope2_Values_Peak">
+										<TargetName Value="Env 2 Peak" />
+										<ModulationAmounts.0 Value="0" />
+										<ModulationAmounts.1 Value="0" />
+										<ModulationAmounts.2 Value="0" />
+										<ModulationAmounts.3 Value="0" />
+										<ModulationAmounts.4 Value="0" />
+										<ModulationAmounts.5 Value="0" />
+										<ModulationAmounts.6 Value="0" />
+										<ModulationAmounts.7 Value="0" />
+										<ModulationAmounts.8 Value="0" />
+										<ModulationAmounts.9 Value="0" />
+										<ModulationAmounts.10 Value="0" />
+										<ModulationAmounts.11 Value="0" />
+										<ModulationAmounts.12 Value="0" />
+									</ModulationConnectionsForInstrumentVector>
+									<ModulationConnectionsForInstrumentVector Id="31" TargetId="Voice_Modulators_Envelope2_Values_Sustain">
+										<TargetName Value="Env 2 Sustain" />
+										<ModulationAmounts.0 Value="0" />
+										<ModulationAmounts.1 Value="0" />
+										<ModulationAmounts.2 Value="0" />
+										<ModulationAmounts.3 Value="0" />
+										<ModulationAmounts.4 Value="0" />
+										<ModulationAmounts.5 Value="0" />
+										<ModulationAmounts.6 Value="0" />
+										<ModulationAmounts.7 Value="0" />
+										<ModulationAmounts.8 Value="0" />
+										<ModulationAmounts.9 Value="0" />
+										<ModulationAmounts.10 Value="0" />
+										<ModulationAmounts.11 Value="0" />
+										<ModulationAmounts.12 Value="0" />
+									</ModulationConnectionsForInstrumentVector>
+									<ModulationConnectionsForInstrumentVector Id="32" TargetId="Voice_Modulators_Envelope2_Values_Final">
+										<TargetName Value="Env 2 Final" />
+										<ModulationAmounts.0 Value="0" />
+										<ModulationAmounts.1 Value="0" />
+										<ModulationAmounts.2 Value="0" />
+										<ModulationAmounts.3 Value="0" />
+										<ModulationAmounts.4 Value="0" />
+										<ModulationAmounts.5 Value="0" />
+										<ModulationAmounts.6 Value="0" />
+										<ModulationAmounts.7 Value="0" />
+										<ModulationAmounts.8 Value="0" />
+										<ModulationAmounts.9 Value="0" />
+										<ModulationAmounts.10 Value="0" />
+										<ModulationAmounts.11 Value="0" />
+										<ModulationAmounts.12 Value="0" />
+									</ModulationConnectionsForInstrumentVector>
+									<ModulationConnectionsForInstrumentVector Id="33" TargetId="Voice_Modulators_Envelope3_Times_Attack">
+										<TargetName Value="Env 3 Attack" />
+										<ModulationAmounts.0 Value="0" />
+										<ModulationAmounts.1 Value="0" />
+										<ModulationAmounts.2 Value="0" />
+										<ModulationAmounts.3 Value="0" />
+										<ModulationAmounts.4 Value="0" />
+										<ModulationAmounts.5 Value="0" />
+										<ModulationAmounts.6 Value="0" />
+										<ModulationAmounts.7 Value="0" />
+										<ModulationAmounts.8 Value="0" />
+										<ModulationAmounts.9 Value="0" />
+										<ModulationAmounts.10 Value="0" />
+										<ModulationAmounts.11 Value="0" />
+										<ModulationAmounts.12 Value="0" />
+									</ModulationConnectionsForInstrumentVector>
+									<ModulationConnectionsForInstrumentVector Id="34" TargetId="Voice_Modulators_Envelope3_Times_Decay">
+										<TargetName Value="Env 3 Decay" />
+										<ModulationAmounts.0 Value="0" />
+										<ModulationAmounts.1 Value="0" />
+										<ModulationAmounts.2 Value="0" />
+										<ModulationAmounts.3 Value="0" />
+										<ModulationAmounts.4 Value="0" />
+										<ModulationAmounts.5 Value="0" />
+										<ModulationAmounts.6 Value="0" />
+										<ModulationAmounts.7 Value="0" />
+										<ModulationAmounts.8 Value="0" />
+										<ModulationAmounts.9 Value="0" />
+										<ModulationAmounts.10 Value="0" />
+										<ModulationAmounts.11 Value="0" />
+										<ModulationAmounts.12 Value="0" />
+									</ModulationConnectionsForInstrumentVector>
+									<ModulationConnectionsForInstrumentVector Id="35" TargetId="Voice_Modulators_Envelope3_Times_Release">
+										<TargetName Value="Env 3 Release" />
+										<ModulationAmounts.0 Value="0" />
+										<ModulationAmounts.1 Value="0" />
+										<ModulationAmounts.2 Value="0" />
+										<ModulationAmounts.3 Value="0" />
+										<ModulationAmounts.4 Value="0" />
+										<ModulationAmounts.5 Value="0" />
+										<ModulationAmounts.6 Value="0" />
+										<ModulationAmounts.7 Value="0" />
+										<ModulationAmounts.8 Value="0" />
+										<ModulationAmounts.9 Value="0" />
+										<ModulationAmounts.10 Value="0" />
+										<ModulationAmounts.11 Value="0" />
+										<ModulationAmounts.12 Value="0" />
+									</ModulationConnectionsForInstrumentVector>
+									<ModulationConnectionsForInstrumentVector Id="36" TargetId="Voice_Modulators_Envelope3_Values_Initial">
+										<TargetName Value="Env 3 Initial" />
+										<ModulationAmounts.0 Value="0" />
+										<ModulationAmounts.1 Value="0" />
+										<ModulationAmounts.2 Value="0" />
+										<ModulationAmounts.3 Value="0" />
+										<ModulationAmounts.4 Value="0" />
+										<ModulationAmounts.5 Value="0" />
+										<ModulationAmounts.6 Value="0" />
+										<ModulationAmounts.7 Value="0" />
+										<ModulationAmounts.8 Value="0" />
+										<ModulationAmounts.9 Value="0" />
+										<ModulationAmounts.10 Value="0" />
+										<ModulationAmounts.11 Value="0" />
+										<ModulationAmounts.12 Value="0" />
+									</ModulationConnectionsForInstrumentVector>
+									<ModulationConnectionsForInstrumentVector Id="37" TargetId="Voice_Modulators_Envelope3_Values_Peak">
+										<TargetName Value="Env 3 Peak" />
+										<ModulationAmounts.0 Value="0" />
+										<ModulationAmounts.1 Value="0" />
+										<ModulationAmounts.2 Value="0" />
+										<ModulationAmounts.3 Value="0" />
+										<ModulationAmounts.4 Value="0" />
+										<ModulationAmounts.5 Value="0" />
+										<ModulationAmounts.6 Value="0" />
+										<ModulationAmounts.7 Value="0" />
+										<ModulationAmounts.8 Value="0" />
+										<ModulationAmounts.9 Value="0" />
+										<ModulationAmounts.10 Value="0" />
+										<ModulationAmounts.11 Value="0" />
+										<ModulationAmounts.12 Value="0" />
+									</ModulationConnectionsForInstrumentVector>
+									<ModulationConnectionsForInstrumentVector Id="38" TargetId="Voice_Modulators_Envelope3_Values_Sustain">
+										<TargetName Value="Env 3 Sustain" />
+										<ModulationAmounts.0 Value="0" />
+										<ModulationAmounts.1 Value="0" />
+										<ModulationAmounts.2 Value="0" />
+										<ModulationAmounts.3 Value="0" />
+										<ModulationAmounts.4 Value="0" />
+										<ModulationAmounts.5 Value="0" />
+										<ModulationAmounts.6 Value="0" />
+										<ModulationAmounts.7 Value="0" />
+										<ModulationAmounts.8 Value="0" />
+										<ModulationAmounts.9 Value="0" />
+										<ModulationAmounts.10 Value="0" />
+										<ModulationAmounts.11 Value="0" />
+										<ModulationAmounts.12 Value="0" />
+									</ModulationConnectionsForInstrumentVector>
+									<ModulationConnectionsForInstrumentVector Id="39" TargetId="Voice_Modulators_Envelope3_Values_Final">
+										<TargetName Value="Env 3 Final" />
+										<ModulationAmounts.0 Value="0" />
+										<ModulationAmounts.1 Value="0" />
+										<ModulationAmounts.2 Value="0" />
+										<ModulationAmounts.3 Value="0" />
+										<ModulationAmounts.4 Value="0" />
+										<ModulationAmounts.5 Value="0" />
+										<ModulationAmounts.6 Value="0" />
+										<ModulationAmounts.7 Value="0" />
+										<ModulationAmounts.8 Value="0" />
+										<ModulationAmounts.9 Value="0" />
+										<ModulationAmounts.10 Value="0" />
+										<ModulationAmounts.11 Value="0" />
+										<ModulationAmounts.12 Value="0" />
+									</ModulationConnectionsForInstrumentVector>
+									<ModulationConnectionsForInstrumentVector Id="40" TargetId="Voice_Modulators_Lfo1_Shape_Amount">
+										<TargetName Value="LFO 1 Amount" />
+										<ModulationAmounts.0 Value="0" />
+										<ModulationAmounts.1 Value="0" />
+										<ModulationAmounts.2 Value="0" />
+										<ModulationAmounts.3 Value="0" />
+										<ModulationAmounts.4 Value="0" />
+										<ModulationAmounts.5 Value="0" />
+										<ModulationAmounts.6 Value="0" />
+										<ModulationAmounts.7 Value="0" />
+										<ModulationAmounts.8 Value="0" />
+										<ModulationAmounts.9 Value="0" />
+										<ModulationAmounts.10 Value="0" />
+										<ModulationAmounts.11 Value="0" />
+										<ModulationAmounts.12 Value="0" />
+									</ModulationConnectionsForInstrumentVector>
+									<ModulationConnectionsForInstrumentVector Id="41" TargetId="Voice_Modulators_Lfo1_Shape_Shaping">
+										<TargetName Value="LFO 1 Shaping" />
+										<ModulationAmounts.0 Value="0" />
+										<ModulationAmounts.1 Value="0" />
+										<ModulationAmounts.2 Value="0" />
+										<ModulationAmounts.3 Value="0" />
+										<ModulationAmounts.4 Value="0" />
+										<ModulationAmounts.5 Value="0" />
+										<ModulationAmounts.6 Value="0" />
+										<ModulationAmounts.7 Value="0" />
+										<ModulationAmounts.8 Value="0" />
+										<ModulationAmounts.9 Value="0" />
+										<ModulationAmounts.10 Value="0" />
+										<ModulationAmounts.11 Value="0" />
+										<ModulationAmounts.12 Value="0" />
+									</ModulationConnectionsForInstrumentVector>
+									<ModulationConnectionsForInstrumentVector Id="42" TargetId="Voice_Modulators_Lfo1_Time_UnifiedRateModulation">
+										<TargetName Value="LFO 1 Rate" />
+										<ModulationAmounts.0 Value="0" />
+										<ModulationAmounts.1 Value="0" />
+										<ModulationAmounts.2 Value="0" />
+										<ModulationAmounts.3 Value="0" />
+										<ModulationAmounts.4 Value="0" />
+										<ModulationAmounts.5 Value="0" />
+										<ModulationAmounts.6 Value="0" />
+										<ModulationAmounts.7 Value="0" />
+										<ModulationAmounts.8 Value="0" />
+										<ModulationAmounts.9 Value="0" />
+										<ModulationAmounts.10 Value="0" />
+										<ModulationAmounts.11 Value="0" />
+										<ModulationAmounts.12 Value="0" />
+									</ModulationConnectionsForInstrumentVector>
+									<ModulationConnectionsForInstrumentVector Id="43" TargetId="Voice_Modulators_Lfo2_Shape_Amount">
+										<TargetName Value="LFO 2 Amount" />
+										<ModulationAmounts.0 Value="0" />
+										<ModulationAmounts.1 Value="0" />
+										<ModulationAmounts.2 Value="0" />
+										<ModulationAmounts.3 Value="0" />
+										<ModulationAmounts.4 Value="0" />
+										<ModulationAmounts.5 Value="0" />
+										<ModulationAmounts.6 Value="0" />
+										<ModulationAmounts.7 Value="0" />
+										<ModulationAmounts.8 Value="0" />
+										<ModulationAmounts.9 Value="0" />
+										<ModulationAmounts.10 Value="0" />
+										<ModulationAmounts.11 Value="0" />
+										<ModulationAmounts.12 Value="0" />
+									</ModulationConnectionsForInstrumentVector>
+									<ModulationConnectionsForInstrumentVector Id="44" TargetId="Voice_Modulators_Lfo2_Shape_Shaping">
+										<TargetName Value="LFO 2 Shaping" />
+										<ModulationAmounts.0 Value="0" />
+										<ModulationAmounts.1 Value="0" />
+										<ModulationAmounts.2 Value="0" />
+										<ModulationAmounts.3 Value="0" />
+										<ModulationAmounts.4 Value="0" />
+										<ModulationAmounts.5 Value="0" />
+										<ModulationAmounts.6 Value="0" />
+										<ModulationAmounts.7 Value="0" />
+										<ModulationAmounts.8 Value="0" />
+										<ModulationAmounts.9 Value="0" />
+										<ModulationAmounts.10 Value="0" />
+										<ModulationAmounts.11 Value="0" />
+										<ModulationAmounts.12 Value="0" />
+									</ModulationConnectionsForInstrumentVector>
+									<ModulationConnectionsForInstrumentVector Id="45" TargetId="Voice_Modulators_Lfo2_Time_UnifiedRateModulation">
+										<TargetName Value="LFO 2 Rate" />
+										<ModulationAmounts.0 Value="0" />
+										<ModulationAmounts.1 Value="0" />
+										<ModulationAmounts.2 Value="0" />
+										<ModulationAmounts.3 Value="0" />
+										<ModulationAmounts.4 Value="0" />
+										<ModulationAmounts.5 Value="0" />
+										<ModulationAmounts.6 Value="0" />
+										<ModulationAmounts.7 Value="0" />
+										<ModulationAmounts.8 Value="0" />
+										<ModulationAmounts.9 Value="0" />
+										<ModulationAmounts.10 Value="0" />
+										<ModulationAmounts.11 Value="0" />
+										<ModulationAmounts.12 Value="0" />
+									</ModulationConnectionsForInstrumentVector>
+									<ModulationConnectionsForInstrumentVector Id="46" TargetId="Voice_Modulators_TimeScale">
+										<TargetName Value="Time" />
+										<ModulationAmounts.0 Value="0" />
+										<ModulationAmounts.1 Value="0" />
+										<ModulationAmounts.2 Value="0" />
+										<ModulationAmounts.3 Value="0" />
+										<ModulationAmounts.4 Value="0" />
+										<ModulationAmounts.5 Value="0" />
+										<ModulationAmounts.6 Value="0" />
+										<ModulationAmounts.7 Value="0" />
+										<ModulationAmounts.8 Value="0" />
+										<ModulationAmounts.9 Value="0" />
+										<ModulationAmounts.10 Value="0" />
+										<ModulationAmounts.11 Value="0" />
+										<ModulationAmounts.12 Value="0" />
+									</ModulationConnectionsForInstrumentVector>
+									<ModulationConnectionsForInstrumentVector Id="47" TargetId="Voice_Modulators_Amount">
+										<TargetName Value="Global Mod Amount" />
+										<ModulationAmounts.0 Value="0" />
+										<ModulationAmounts.1 Value="0" />
+										<ModulationAmounts.2 Value="0" />
+										<ModulationAmounts.3 Value="0" />
+										<ModulationAmounts.4 Value="0" />
+										<ModulationAmounts.5 Value="0" />
+										<ModulationAmounts.6 Value="0" />
+										<ModulationAmounts.7 Value="0" />
+										<ModulationAmounts.8 Value="0" />
+										<ModulationAmounts.9 Value="0" />
+										<ModulationAmounts.10 Value="0" />
+										<ModulationAmounts.11 Value="0" />
+										<ModulationAmounts.12 Value="0" />
+									</ModulationConnectionsForInstrumentVector>
+									<ModulationConnectionsForInstrumentVector Id="48" TargetId="Voice_Unison_Amount">
+										<TargetName Value="Unison Amount" />
+										<ModulationAmounts.0 Value="0" />
+										<ModulationAmounts.1 Value="0" />
+										<ModulationAmounts.2 Value="0" />
+										<ModulationAmounts.3 Value="0" />
+										<ModulationAmounts.4 Value="0" />
+										<ModulationAmounts.5 Value="0" />
+										<ModulationAmounts.6 Value="0" />
+										<ModulationAmounts.7 Value="0" />
+										<ModulationAmounts.8 Value="0" />
+										<ModulationAmounts.9 Value="0" />
+										<ModulationAmounts.10 Value="0" />
+										<ModulationAmounts.11 Value="0" />
+										<ModulationAmounts.12 Value="0" />
+									</ModulationConnectionsForInstrumentVector>
+									<ModulationConnectionsForInstrumentVector Id="49" TargetId="Voice_Global_AmpModulation">
+										<TargetName Value="Amp" />
+										<ModulationAmounts.0 Value="0" />
+										<ModulationAmounts.1 Value="0" />
+										<ModulationAmounts.2 Value="0" />
+										<ModulationAmounts.3 Value="0" />
+										<ModulationAmounts.4 Value="0" />
+										<ModulationAmounts.5 Value="0.5" />
+										<ModulationAmounts.6 Value="0" />
+										<ModulationAmounts.7 Value="0" />
+										<ModulationAmounts.8 Value="0" />
+										<ModulationAmounts.9 Value="0" />
+										<ModulationAmounts.10 Value="0" />
+										<ModulationAmounts.11 Value="0" />
+										<ModulationAmounts.12 Value="0" />
+									</ModulationConnectionsForInstrumentVector>
+									<ModulationConnectionsForInstrumentVector Id="50" TargetId="Voice_Global_PitchModulation">
+										<TargetName Value="Pitch" />
+										<ModulationAmounts.0 Value="0" />
+										<ModulationAmounts.1 Value="0" />
+										<ModulationAmounts.2 Value="0" />
+										<ModulationAmounts.3 Value="0" />
+										<ModulationAmounts.4 Value="0" />
+										<ModulationAmounts.5 Value="0" />
+										<ModulationAmounts.6 Value="0" />
+										<ModulationAmounts.7 Value="0.04166662693" />
+										<ModulationAmounts.8 Value="0" />
+										<ModulationAmounts.9 Value="0" />
+										<ModulationAmounts.10 Value="0" />
+										<ModulationAmounts.11 Value="1" />
+										<ModulationAmounts.12 Value="0" />
+									</ModulationConnectionsForInstrumentVector>
+									<ModulationConnectionsForInstrumentVector Id="51" TargetId="Voice_Global_Glide">
+										<TargetName Value="Glide" />
+										<ModulationAmounts.0 Value="0" />
+										<ModulationAmounts.1 Value="0" />
+										<ModulationAmounts.2 Value="0" />
+										<ModulationAmounts.3 Value="0" />
+										<ModulationAmounts.4 Value="0" />
+										<ModulationAmounts.5 Value="0" />
+										<ModulationAmounts.6 Value="0" />
+										<ModulationAmounts.7 Value="0" />
+										<ModulationAmounts.8 Value="0" />
+										<ModulationAmounts.9 Value="0" />
+										<ModulationAmounts.10 Value="0" />
+										<ModulationAmounts.11 Value="0" />
+										<ModulationAmounts.12 Value="0" />
+									</ModulationConnectionsForInstrumentVector>
+								</ModulationConnections>
+							</InstrumentVector>
+						</Devices>
+						<SignalModulations />
+					</DeviceChain>
+				</DeviceChain>
+				<ReWireDeviceMidiTargetId Value="0" />
+				<PitchbendRange Value="96" />
+				<IsTuned Value="true" />
+				<ControllerLayoutRemoteable Value="0" />
+				<ControllerLayoutCustomization>
+					<PitchClassSource Value="0" />
+					<OctaveSource Value="2" />
+					<KeyNoteTarget Value="60" />
+					<StepSize Value="1" />
+					<OctaveEvery Value="12" />
+					<AllowedKeys Value="0" />
+					<FillerKeysMapTo Value="0" />
+				</ControllerLayoutCustomization>
+			</MidiTrack>

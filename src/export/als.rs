@@ -75,7 +75,7 @@ use crate::formats::base::{Module, Sample};
 use crate::xmlutil;
 
 const LOCAL_ID_THRESHOLD: i64 = 1000;
-const AUTOMATION_SENTINEL_TIME: &str = "-63072000"; // Ableton's "value before the automation starts" marker
+pub(crate) const AUTOMATION_SENTINEL_TIME: &str = "-63072000"; // Ableton's "value before the automation starts" marker
 // The Sampler device's own Volume knob only swings ±36dB and can never reach true silence — a
 // note faded all the way to 0 (Volume Slide clamped at the floor, a quiet Cxx, etc.) was still
 // clearly audible. The *track's* Mixer/Volume fader (DeviceChain/Mixer/Volume) goes down to a
@@ -196,13 +196,13 @@ fn amiga_pan(channel: usize, intensity: f64) -> f64 {
     sign * intensity
 }
 
-fn is_all_digits(s: &str) -> bool {
+pub(crate) fn is_all_digits(s: &str) -> bool {
     !s.is_empty() && s.chars().all(|c| c.is_ascii_digit())
 }
 
-struct IdCounter(i64);
+pub(crate) struct IdCounter(pub i64);
 impl IdCounter {
-    fn next(&mut self) -> i64 {
+    pub(crate) fn next(&mut self) -> i64 {
         let v = self.0;
         self.0 += 1;
         v
@@ -214,8 +214,9 @@ impl IdCounter {
 /// calling this. Re-touching it here was harmless as long as nothing else referenced a
 /// track's own Id (true for a plain MidiTrack) — but a GroupTrack's Id *is* referenced
 /// (its member tracks' TrackGroupId points to it), so silently reassigning it out from under
-/// the caller after they've already captured/returned it breaks that reference.
-fn renumber_global_ids(track: &mut Element, id_counter: &mut IdCounter) {
+/// the caller after they've already captured/returned it breaks that reference. Shared with
+/// export::vgm_als, which clones AudioTrack elements the same way.
+pub(crate) fn renumber_global_ids(track: &mut Element, id_counter: &mut IdCounter) {
     let mut id_map: HashMap<String, String> = HashMap::new();
     for child in &mut track.children {
         let XMLNode::Element(child) = child else { continue };
@@ -240,7 +241,39 @@ fn renumber_global_ids(track: &mut Element, id_counter: &mut IdCounter) {
     });
 }
 
-fn fmt_number(x: f64) -> String {
+/// Sets a Live Set's tempo to a single constant BPM. Writing the static `Tempo/Manual` value
+/// alone isn't enough: Live seeds every new/template project with a tempo automation envelope
+/// on the Main Track by default, and when one is present Live follows *that* instead, silently
+/// ignoring the Manual value (confirmed against a real Ableton round-trip — see the tracker
+/// side's own per-song version of this same override for the story). This is the flat,
+/// non-changing version of that override, for exporters with a single constant tempo rather
+/// than a timeline of tempo changes.
+pub(crate) fn set_constant_tempo(live_set: &mut Element, tempo_bpm: f64) {
+    if let Some(tempo_el) = xmlutil::find_mut(live_set, ".//Tempo/Manual") {
+        tempo_el.attributes.insert("Value".to_string(), fmt_number(tempo_bpm));
+    }
+    let tempo_target_id = xmlutil::find(live_set, ".//Tempo/AutomationTarget").and_then(|e| e.attributes.get("Id").cloned());
+    let Some(tempo_target_id) = tempo_target_id else { return };
+    let Some(main_track) = xmlutil::find_mut(live_set, ".//MainTrack") else { return };
+    let Some(envelopes) = xmlutil::find_mut(main_track, "./AutomationEnvelopes/Envelopes") else { return };
+    for node in &mut envelopes.children {
+        let XMLNode::Element(env) = node else { continue };
+        if env.name != "AutomationEnvelope" {
+            continue;
+        }
+        let matches_target =
+            xmlutil::find(env, "./EnvelopeTarget/PointeeId").map(|p| p.attributes.get("Value") == Some(&tempo_target_id)).unwrap_or(false);
+        if !matches_target {
+            continue;
+        }
+        let Some(events_el) = xmlutil::find_mut(env, ".//Automation/Events") else { continue };
+        events_el.children.clear();
+        append_child(events_el, new_element("FloatEvent", &[("Id", "0"), ("Time", AUTOMATION_SENTINEL_TIME), ("Value", &fmt_number(tempo_bpm))]));
+        append_child(events_el, new_element("FloatEvent", &[("Id", "1"), ("Time", "0"), ("Value", &fmt_number(tempo_bpm))]));
+    }
+}
+
+pub(crate) fn fmt_number(x: f64) -> String {
     let rounded = (x * 1_000_000.0).round() / 1_000_000.0; // avoids float-accumulation noise
     if rounded.fract() == 0.0 && rounded.is_finite() {
         return format!("{}", rounded as i64);
@@ -251,7 +284,7 @@ fn fmt_number(x: f64) -> String {
     s.to_string()
 }
 
-fn max_id(root: &Element) -> i64 {
+pub(crate) fn max_id(root: &Element) -> i64 {
     let mut result: i64 = 0;
     for node in xmlutil::iter_elements(root) {
         if let Some(value) = node.attributes.get("Id") {
@@ -355,7 +388,7 @@ fn collect_bend_points(notes: &[NoteEvent]) -> Vec<(f64, f64, bool)> {
 /// instead of a ramp gliding across the whole gap. Appropriate for effects that are instant
 /// jumps in the tracker (Set Volume, Set Panning) — not for genuinely continuous ones like
 /// Portamento, which should stay a smooth glide.
-fn step_points(points: &[(f64, f64)]) -> Vec<(f64, f64)> {
+pub(crate) fn step_points(points: &[(f64, f64)]) -> Vec<(f64, f64)> {
     if points.is_empty() {
         return Vec::new();
     }
@@ -377,7 +410,7 @@ fn step_points(points: &[(f64, f64)]) -> Vec<(f64, f64)> {
 /// connect smoothly to the previous point, not read as a discrete step. Points marked
 /// `glide=False` (Set Volume, a slide's own first tick, or a bracket point) still get the
 /// step treatment, same as step_points.
-fn step_points_with_glide(points: &[(f64, f64, bool)]) -> Vec<(f64, f64)> {
+pub(crate) fn step_points_with_glide(points: &[(f64, f64, bool)]) -> Vec<(f64, f64)> {
     if points.is_empty() {
         return Vec::new();
     }
@@ -394,7 +427,7 @@ fn step_points_with_glide(points: &[(f64, f64, bool)]) -> Vec<(f64, f64)> {
     stepped
 }
 
-fn new_element(name: &str, attrs: &[(&str, &str)]) -> Element {
+pub(crate) fn new_element(name: &str, attrs: &[(&str, &str)]) -> Element {
     let mut el = Element::new(name);
     for (k, v) in attrs {
         el.attributes.insert((*k).to_string(), (*v).to_string());
@@ -402,7 +435,7 @@ fn new_element(name: &str, attrs: &[(&str, &str)]) -> Element {
     el
 }
 
-fn append_child(parent: &mut Element, child: Element) {
+pub(crate) fn append_child(parent: &mut Element, child: Element) {
     parent.children.push(XMLNode::Element(child));
 }
 
@@ -414,7 +447,7 @@ fn append_child(parent: &mut Element, child: Element) {
 /// clips) parses as valid, well-formed XML but Ableton silently ignores it for an Arrangement
 /// clip — confirmed against a real user-drawn reference project whose working automation
 /// lived here, with an empty ClipEnvelope list inside its clip.
-fn build_automation_envelope(
+pub(crate) fn build_automation_envelope(
     envelopes_el: &mut Element, points: &[(f64, f64)], pointee_id: &str, id_counter: &mut IdCounter, baseline: f64,
 ) {
     if points.is_empty() {
@@ -473,11 +506,11 @@ fn group_notes_by_segment<'a>(events: &'a [NoteEvent], segments: &[Segment]) -> 
     grouped
 }
 
-struct ClippedNote {
-    start_beat: f64,
-    duration_beat: f64,
-    velocity: i32,
-    pitch: i32,
+pub(crate) struct ClippedNote {
+    pub(crate) start_beat: f64,
+    pub(crate) duration_beat: f64,
+    pub(crate) velocity: i32,
+    pub(crate) pitch: i32,
 }
 
 /// Truncates a note's duration at the segment's end — a note that naturally sustains into
@@ -493,7 +526,7 @@ fn clip_note_to_segment(note: &NoteEvent, segment: &Segment) -> ClippedNote {
     ClippedNote { start_beat: note.start_beat, duration_beat: duration, velocity: note.velocity, pitch: note.pitch }
 }
 
-fn build_clip(
+pub(crate) fn build_clip(
     clip_template: &Element, display_name: &str, segment: &Segment, local_notes: &[ClippedNote], seg_index: usize,
     color_index: i32,
 ) -> Element {

@@ -2,4 +2,8 @@ pub mod als;
 pub mod midi;
 pub mod midi_file;
 pub mod notes;
+pub mod vgm_als;
+pub mod vgm_operator;
+pub mod vgm_render;
+pub mod vgm_wavetable;
 pub mod wav;
