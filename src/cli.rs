@@ -25,7 +25,7 @@ pub enum Command {
     List { module_path: PathBuf },
 
     /// Extract all samples from a tracker module as .wav files. Not applicable to VGM/VGZ
-    /// (which has no stored samples) — use 'convert' instead.
+    /// (which has no stored samples) — use 'convert-als' instead.
     ExtractSamples {
         module_path: PathBuf,
         #[arg(short = 'o', long = "output")]
@@ -36,7 +36,7 @@ pub enum Command {
     },
 
     /// Convert a tracker module's patterns to a .mid file (one track per sample). Not
-    /// applicable to VGM/VGZ — use 'convert' instead.
+    /// applicable to VGM/VGZ — use 'convert-als' instead.
     ExtractMidi {
         module_path: PathBuf,
         #[arg(short = 'o', long = "output")]
@@ -45,13 +45,41 @@ pub enum Command {
         #[arg(short = 'v', long = "verbose")]
         verbose: bool,
     },
+
+    /// Render a VGM/VGZ file's full chip-emulated mix down to a single .wav file. VGM/VGZ
+    /// only — tracker modules have no audio-rendering engine of their own yet (Ableton's own
+    /// Sampler does that at playback time once you've run 'convert-als'), so use
+    /// 'extract-samples' for a tracker module's raw stored samples instead.
+    ExtractMixedTracks {
+        module_path: PathBuf,
+        #[arg(short = 'o', long = "output")]
+        output_path: PathBuf,
+        /// Print extra detail about the render (duration, peak level).
+        #[arg(short = 'v', long = "verbose")]
+        verbose: bool,
+    },
+
+    /// Render a VGM/VGZ file's chip-emulated audio to one .wav file per chip channel (stem),
+    /// isolated by muting every other channel — the same per-channel WAVs 'convert-als'
+    /// writes into an Ableton project's Samples/Imported folder, without the project itself.
+    /// VGM/VGZ only — see 'extract-mixed-tracks' for why tracker modules aren't supported yet.
+    ExtractSeparatedTracksWav {
+        module_path: PathBuf,
+        #[arg(short = 'o', long = "output")]
+        output_dir: PathBuf,
+        /// Print extra detail about the render (which channels were non-silent).
+        #[arg(short = 'v', long = "verbose")]
+        verbose: bool,
+    },
+
     /// Convert a tracker module or VGM/VGZ file into an Ableton Live Set (.als).
     ///
-    /// For a tracker module: one Sampler per sample. For a VGM/VGZ file: the YM2413/AY8910
-    /// chips are actually emulated and rendered to audio — one AudioTrack for the full mix
-    /// plus one per chip channel (stems), no MIDI/Sampler involved. Chips other than
-    /// YM2413/AY8910 aren't emulated yet (see 'list' to check what a given file uses).
-    Convert {
+    /// For a tracker module: one Sampler per sample, no audio synthesis done by ablemod
+    /// itself. For a VGM/VGZ file: the chips are actually emulated and rendered to audio —
+    /// one AudioTrack for the full mix plus one per chip channel (stems), no MIDI/Sampler
+    /// involved (see 'list' to check which chips a given file uses, and README.md for the
+    /// full supported-chip list).
+    ConvertAls {
         module_path: PathBuf,
         /// Optional: a real .als exported from Ableton Live, containing a MIDI track with a
         /// Sampler device holding a sample and its content laid out in Arrangement view.
@@ -141,8 +169,8 @@ pub fn run(cli: Cli) -> Result<(), String> {
                 return Err(
                     "extract-samples doesn't apply to VGM/VGZ files: unlike a tracker module, a VGM has no stored \
                      samples to extract — its audio only exists once the chip registers are actually synthesized. \
-                     Use 'convert' instead, which renders the full mix and one stem per chip channel as WAVs inside \
-                     an Ableton project."
+                     Use 'extract-mixed-tracks'/'extract-separated-tracks-wav' for the rendered chip audio, or \
+                     'convert-als' for a full Ableton project."
                         .to_string(),
                 );
             }
@@ -152,13 +180,38 @@ pub fn run(cli: Cli) -> Result<(), String> {
             if is_vgm_path(&module_path) {
                 return Err(
                     "extract-midi doesn't apply to VGM/VGZ files: this project renders VGM chip audio directly \
-                     (see 'convert') rather than transcribing register writes into MIDI notes."
+                     (see 'convert-als'/'extract-mixed-tracks'/'extract-separated-tracks-wav') rather than \
+                     transcribing register writes into MIDI notes."
                         .to_string(),
                 );
             }
             extract_midi_cmd(&module_path, &output_path, verbose)
         }
-        Command::Convert { module_path, template_path, output_path, amiga_panning, verbose } => {
+        Command::ExtractMixedTracks { module_path, output_path, verbose } => {
+            if !is_vgm_path(&module_path) {
+                return Err(
+                    "extract-mixed-tracks doesn't apply to tracker modules yet: no audio-rendering engine exists \
+                     for .mod/.xm/.s3m today (only VGM/VGZ's chip emulation renders real audio) — Ableton's own \
+                     Sampler does the synthesis at playback time after 'convert-als', or use 'extract-samples' for \
+                     the module's own raw stored samples."
+                        .to_string(),
+                );
+            }
+            extract_mixed_tracks_cmd(&module_path, &output_path, verbose)
+        }
+        Command::ExtractSeparatedTracksWav { module_path, output_dir, verbose } => {
+            if !is_vgm_path(&module_path) {
+                return Err(
+                    "extract-separated-tracks-wav doesn't apply to tracker modules yet: no audio-rendering engine \
+                     exists for .mod/.xm/.s3m today (only VGM/VGZ's chip emulation renders real audio) — Ableton's \
+                     own Sampler does the synthesis at playback time after 'convert-als', or use 'extract-samples' \
+                     for the module's own raw stored samples."
+                        .to_string(),
+                );
+            }
+            extract_separated_tracks_wav_cmd(&module_path, &output_dir, verbose)
+        }
+        Command::ConvertAls { module_path, template_path, output_path, amiga_panning, verbose } => {
             if is_vgm_path(&module_path) {
                 vgm_convert_cmd(&module_path, template_path.as_deref(), &output_path, verbose)
             } else {
@@ -199,11 +252,23 @@ fn vgm_list_cmd(path: &std::path::Path) -> Result<(), String> {
     if vgm.scc_clock > 0 {
         println!("  K051649/SCC (Konami) @ {} Hz — emulated by convert", vgm.scc_clock);
     }
-    if vgm.ym3526_clock > 0 {
-        println!("  YM3526 (OPL FM) @ {} Hz — approximated by convert via Ableton's Operator instrument (no bit-accurate WAV render)", vgm.ym3526_clock);
-    }
-    if vgm.ym3812_clock > 0 {
-        println!("  YM3812 (OPL2 FM) @ {} Hz — approximated by convert via Ableton's Operator instrument (no bit-accurate WAV render)", vgm.ym3812_clock);
+    for (clock, name) in [
+        (vgm.ym3526_clock, "YM3526 (OPL FM)"),
+        (vgm.ym3812_clock, "YM3812 (OPL2 FM)"),
+        (vgm.ym2612_clock, "YM2612 (OPN2 FM, Sega Genesis/Mega Drive)"),
+        (vgm.ym2151_clock, "YM2151 (OPM FM, arcade/X68000)"),
+        (vgm.ym2203_clock, "YM2203 (OPN FM)"),
+        (vgm.ym2608_clock, "YM2608 (OPNA FM)"),
+        (vgm.ym2610_clock, "YM2610 (OPNB FM, Neo Geo)"),
+        (vgm.segapcm_clock, "Sega PCM"),
+        (vgm.rf5c68_clock, "RF5C68 (PCM)"),
+        (vgm.rf5c164_clock, "RF5C164 (PCM)"),
+        (vgm.gb_dmg_clock, "GameBoy DMG"),
+        (vgm.nes_apu_clock, "NES APU"),
+    ] {
+        if clock > 0 {
+            println!("  {name} @ {clock} Hz — emulated by convert");
+        }
     }
     if !vgm.unsupported_commands.is_empty() {
         println!("\nOther chips used in this file (not emulated, silently skipped by convert):");
@@ -234,6 +299,25 @@ fn vgm_convert_cmd(
             vgm.ym3526_clock,
             vgm.ym3812_clock
         );
+        let extra_chips: Vec<String> = [
+            (vgm.ym2612_clock, "YM2612"),
+            (vgm.ym2151_clock, "YM2151"),
+            (vgm.ym2203_clock, "YM2203"),
+            (vgm.ym2608_clock, "YM2608"),
+            (vgm.ym2610_clock, "YM2610"),
+            (vgm.segapcm_clock, "SegaPCM"),
+            (vgm.rf5c68_clock, "RF5C68"),
+            (vgm.rf5c164_clock, "RF5C164"),
+            (vgm.gb_dmg_clock, "GB-DMG"),
+            (vgm.nes_apu_clock, "NES-APU"),
+        ]
+        .into_iter()
+        .filter(|&(clock, _)| clock > 0)
+        .map(|(clock, name)| format!("{name}={clock}Hz"))
+        .collect();
+        if !extra_chips.is_empty() {
+            println!("Verbose: {}", extra_chips.join(" "));
+        }
         if !vgm.unsupported_commands.is_empty() {
             println!("Verbose: other chips found in this file are not emulated and will be silent:");
             let mut by_chip: std::collections::BTreeMap<&str, u32> = std::collections::BTreeMap::new();
@@ -256,41 +340,96 @@ fn vgm_convert_cmd(
 
     let master = crate::export::vgm_render::render(&vgm);
     let stems = crate::export::vgm_render::render_stems(&vgm);
-    // Tempo doesn't affect which channels are non-silent, only their beat timing — any
-    // placeholder value works fine here just to count them for this summary/warning.
-    let wavetable_count =
-        crate::export::vgm_wavetable::extract_channels(&vgm, 120.0).iter().filter(|c| !c.notes.is_empty()).count();
-    let operator_count = [(vgm::Chip::Ym3526, vgm.ym3526_clock), (vgm::Chip::Ym3812, vgm.ym3812_clock)]
-        .into_iter()
-        .filter(|&(_, clock)| clock > 0)
-        .map(|(chip, clock)| {
-            crate::export::vgm_operator::extract_channels(&vgm, chip, clock, 120.0).iter().filter(|c| !c.notes.is_empty()).count()
-        })
-        .sum::<usize>();
-    crate::export::vgm_als::export_als(&vgm, &master, &stems, output_path, &template_bytes)?;
+    // Wavetable/Operator approximation tracks are off by default — see export_als's own doc
+    // comment. Only the bit-accurate WAV tracks are generated here.
+    crate::export::vgm_als::export_als(&vgm, &master, &stems, output_path, &template_bytes, false)?;
 
     println!("wrote {}", output_path.display());
     println!(
         "wrote samples to {}",
         output_path.parent().unwrap_or_else(|| std::path::Path::new(".")).join("Samples").join("Imported").display()
     );
-    if stems.is_empty() && wavetable_count == 0 && operator_count == 0 {
+    if stems.is_empty() {
         println!(
             "\nWarning: the project has no tracks. None of this file's music data is on a chip \
-             this converter emulates (YM2413, AY8910, K051649/SCC, YM3526, YM3812) — run \
-             `ablemod list` on it to see which chip(s) actually carry the music."
+             this converter emulates — run `ablemod list` on it to see which chip(s) actually \
+             carry the music."
         );
     } else if verbose {
         match vgm.loop_start_sample {
             Some(_) => println!("Verbose: {} WAV track(s), each split into intro+loop clips at the file's declared loop point", stems.len()),
             None => println!("Verbose: {} WAV track(s) (no declared loop point — one full-length clip each)", stems.len()),
         }
-        if wavetable_count > 0 {
-            println!("Verbose: {wavetable_count} Wavetable track(s) (Ableton Wavetable instrument, SCC channels only — an approximation, see the WAV tracks for the accurate render)");
-        }
-        if operator_count > 0 {
-            println!("Verbose: {operator_count} Operator track(s) (Ableton Operator instrument, YM3526/YM3812 channels only — this chip's only audible result, no bit-accurate WAV render exists)");
-        }
+    }
+    Ok(())
+}
+
+/// Renders a VGM/VGZ file's full chip-emulated mix down to a single .wav — the same render
+/// `vgm_convert_cmd` computes internally (`export::vgm_render::render`), just written out on
+/// its own rather than packaged into an Ableton project. Self-normalized to the same 0.9 peak
+/// target `export::vgm_als::export_als` uses for its own shared stem gain (see its own
+/// comment) — there's only one file here, so "shared" and "self" gain are the same thing.
+fn extract_mixed_tracks_cmd(path: &std::path::Path, output_path: &std::path::Path, verbose: bool) -> Result<(), String> {
+    let bytes = std::fs::read(path).map_err(|e| format!("failed to read {}: {e}", path.display()))?;
+    let vgm = vgm::parse(&bytes)?;
+    if let Some(parent) = output_path.parent() {
+        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+
+    let master = crate::export::vgm_render::render(&vgm);
+    let peak = crate::export::vgm_render::peak(&master);
+    let gain = if peak > 0.0 { 0.9 / peak } else { 1.0 };
+    crate::export::vgm_render::write_wav(&master, output_path, gain).map_err(|e| e.to_string())?;
+
+    println!("wrote {}", output_path.display());
+    if verbose {
+        println!(
+            "Verbose: {:.1}s @ {}Hz, peak {:.3} before normalization",
+            master.left.len() as f64 / master.sample_rate as f64,
+            master.sample_rate,
+            peak
+        );
+    }
+    Ok(())
+}
+
+/// Renders a VGM/VGZ file's chip-emulated audio to one .wav per non-silent channel (stem) —
+/// the same per-channel renders `vgm_convert_cmd` writes into an Ableton project's own
+/// Samples/Imported folder (`export::vgm_render::render_stems`), written out on their own
+/// instead. Unlike `vgm_convert_cmd`, there's no intro/loop clip split here (that's an
+/// Arrangement-view placement concern, not meaningful for a raw file) — each stem is one
+/// full-length WAV. All stems share one gain (computed from the full mix's own peak, not each
+/// stem independently) for the same reason `export::vgm_render::write_wav`'s own doc comment
+/// gives: independently peak-normalizing each stem would make a quiet background voice as
+/// loud as the lead.
+fn extract_separated_tracks_wav_cmd(path: &std::path::Path, output_dir: &std::path::Path, verbose: bool) -> Result<(), String> {
+    let bytes = std::fs::read(path).map_err(|e| format!("failed to read {}: {e}", path.display()))?;
+    let vgm = vgm::parse(&bytes)?;
+    std::fs::create_dir_all(output_dir).map_err(|e| format!("failed to create {}: {e}", output_dir.display()))?;
+
+    let master = crate::export::vgm_render::render(&vgm);
+    let stems = crate::export::vgm_render::render_stems(&vgm);
+    let peak = crate::export::vgm_render::peak(&master);
+    let gain = if peak > 0.0 { 0.9 / peak } else { 1.0 };
+
+    if stems.is_empty() {
+        println!(
+            "\nWarning: no tracks to write. None of this file's music data is on a chip this converter emulates \
+             — run `ablemod list` on it to see which chip(s) actually carry the music."
+        );
+        return Ok(());
+    }
+
+    for (i, stem) in stems.iter().enumerate() {
+        let safe_name = crate::export::vgm_als::sanitize_filename(&stem.name);
+        let wav_path = output_dir.join(format!("{:02}_{safe_name}.wav", i + 1));
+        crate::export::vgm_render::write_wav(&stem.audio, &wav_path, gain).map_err(|e| format!("failed to write {}: {e}", wav_path.display()))?;
+    }
+
+    println!("wrote {} track(s) to {}", stems.len(), output_dir.display());
+    if verbose {
+        let names: Vec<&str> = stems.iter().map(|s| s.name.as_str()).collect();
+        println!("Verbose: {}", names.join(", "));
     }
     Ok(())
 }

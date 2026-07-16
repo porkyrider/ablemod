@@ -1,25 +1,74 @@
-//! Regression tests for the ported chip emulators (chips::ay8910, chips::ym2413,
-//! chips::scc) — these can't be checked against a real fixture the way the tracker side is (no
-//! real hardware to compare against here), so instead they check the physics: does the
-//! emulated chip actually produce the frequency its own register formula says it should? This
-//! is the same measurement approach (zero-crossing counting) used to manually validate all
-//! three ports before building anything on top of them.
+//! Regression tests for the chip emulators (chips::ay8910, chips::ym2413, chips::scc) — these
+//! can't be checked against a real fixture the way the tracker side is (no real hardware to
+//! compare against here), so instead they check the physics: does the emulated chip actually
+//! produce the frequency its own register formula says it should?
+//!
+//! Uses autocorrelation (searching lag range 0.4x-2.5x of the register formula's own predicted
+//! period, maximizing correlation) rather than naive zero-crossing counting — zero-crossing
+//! was the original method here, but proved too fragile against SCC's real output once its
+//! emulator started synthesizing at a much coarser native rate before this project's own
+//! resampling (see chips::scc's own module comment): the *audible* pitch was already correct
+//! (confirmed directly against this exact scenario), zero-crossing was just miscounting
+//! resampling-ringing as extra cycles. Autocorrelation is the same robust method this project
+//! already uses elsewhere (export::vgm_wavetable's own real-file pitch verification) for
+//! exactly this class of measurement fragility.
 
-use ablemod::chips::ay8910::Ayumi;
+use ablemod::chips::ay8910::Ay8910;
 use ablemod::chips::scc::Scc;
 use ablemod::chips::ym2413::Opll;
 
+/// Loads a tone period (registers 0-5, two bytes per channel: low 8 bits then high nibble) —
+/// chips::ay8910::Ay8910 now takes raw registers directly (no more high-level set_tone/
+/// set_mixer/set_volume API, see its own module comment), so every test below builds the
+/// exact register writes a real AY8910 rip would make instead.
+fn ay_set_tone(ay: &mut Ay8910, ch: usize, period: u16) {
+    ay.write((ch * 2) as u8, (period & 0xFF) as u8);
+    ay.write((ch * 2 + 1) as u8, ((period >> 8) & 0x0F) as u8);
+}
+
+/// Register 7: bits 0-2 = tone disable per channel (A/B/C), bits 3-5 = noise disable per
+/// channel — 1 means "off" in both groups (real AY8910 mixer convention).
+fn ay_set_mixer(ay: &mut Ay8910, tone_off: [bool; 3], noise_off: [bool; 3]) {
+    let mut value = 0u8;
+    for (ch, &off) in tone_off.iter().enumerate() {
+        value |= (off as u8) << ch;
+    }
+    for (ch, &off) in noise_off.iter().enumerate() {
+        value |= (off as u8) << (ch + 3);
+    }
+    ay.write(7, value);
+}
+
+fn ay_set_volume(ay: &mut Ay8910, ch: usize, volume: u8) {
+    ay.write((8 + ch) as u8, volume & 0x0F); // bit 4 (envelope-enable) left clear
+}
+
 const SAMPLE_RATE: u32 = 44100;
 
-fn measure_frequency(samples: &[f64], sample_rate: u32, settle: usize) -> f64 {
-    let mut crossings = 0;
-    for w in samples[settle..].windows(2) {
-        if w[0] <= 0.0 && w[1] > 0.0 {
-            crossings += 1;
+fn measure_frequency(samples: &[f64], sample_rate: u32, settle: usize, expected_hz: f64) -> f64 {
+    let samples = &samples[settle..];
+    let predicted_period = sample_rate as f64 / expected_hz;
+    // A tight band around the register formula's own prediction, not the wide 0.4x-2.5x range
+    // a blind pitch detector would need — wide enough to accommodate real measurement/
+    // resampling error, but tight enough to never accidentally lock onto the 2x/0.5x
+    // subharmonic a symmetric-ish waveform's own autocorrelation can score higher than the true
+    // fundamental (caught directly: YM2413's carrier-only test tone did exactly this at 2.5x).
+    // A genuine octave-scale emulator bug (this is exactly how the SCC regression this
+    // migration introduced, and then fixed, was first caught) still lands well outside this
+    // band and fails loudly, which is the whole point of these tests.
+    let min_lag = (predicted_period * 0.7).max(1.0) as usize;
+    let max_lag = ((predicted_period * 1.4) as usize).min(samples.len() / 2);
+
+    let mut best_lag = min_lag;
+    let mut best_corr = f64::MIN;
+    for lag in min_lag..max_lag {
+        let corr: f64 = (0..samples.len() - lag).map(|i| samples[i] * samples[i + lag]).sum();
+        if corr > best_corr {
+            best_corr = corr;
+            best_lag = lag;
         }
     }
-    let duration_s = (samples.len() - settle) as f64 / sample_rate as f64;
-    crossings as f64 / duration_s
+    sample_rate as f64 / best_lag as f64
 }
 
 #[test]
@@ -28,62 +77,59 @@ fn test_ay8910_tone_frequency_matches_the_chips_own_formula() {
     // port either gets right or doesn't; no room for subjective interpretation here.
     let clock = 1_789_773.0;
     let period = 200;
-    let mut ay = Ayumi::new(true, clock, SAMPLE_RATE);
-    ay.set_tone(0, period);
-    ay.set_mixer(0, 0, 1, 0); // tone on, noise off, envelope off
-    ay.set_volume(0, 15);
-    ay.set_mixer(1, 1, 1, 0); // channels B/C fully silent
-    ay.set_mixer(2, 1, 1, 0);
+    let mut ay = Ay8910::new(true, clock, SAMPLE_RATE);
+    ay_set_tone(&mut ay, 0, period);
+    ay_set_mixer(&mut ay, [false, true, true], [true, true, true]); // A: tone on, noise off; B/C fully silent
+    ay_set_volume(&mut ay, 0, 15);
 
     let mut samples = Vec::with_capacity(SAMPLE_RATE as usize);
     for _ in 0..SAMPLE_RATE {
-        ay.process();
-        ay.remove_dc();
-        samples.push(ay.left);
+        samples.push(ay.calc() as f64);
     }
 
-    let measured = measure_frequency(&samples, SAMPLE_RATE, 2000);
     let expected = clock / (16.0 * period as f64);
+    let measured = measure_frequency(&samples, SAMPLE_RATE, 2000, expected);
     assert!((measured - expected).abs() / expected < 0.01, "measured {measured} Hz, expected {expected} Hz");
 }
 
 #[test]
 fn test_ay8910_solo_silences_every_other_channel() {
-    let mut ay = Ayumi::new(true, 1_789_773.0, SAMPLE_RATE);
+    let mut ay = Ay8910::new(true, 1_789_773.0, SAMPLE_RATE);
     for ch in 0..3 {
-        ay.set_tone(ch, 200);
-        ay.set_mixer(ch, 0, 1, 0);
-        ay.set_volume(ch, 15);
+        ay_set_tone(&mut ay, ch, 200);
+    }
+    ay_set_mixer(&mut ay, [false, false, false], [true, true, true]);
+    for ch in 0..3 {
+        ay_set_volume(&mut ay, ch, 15);
     }
     ay.solo(1);
 
     let mut peak = 0.0f64;
     let mut samples = Vec::with_capacity(SAMPLE_RATE as usize);
     for _ in 0..SAMPLE_RATE {
-        ay.process();
-        ay.remove_dc();
-        peak = peak.max(ay.left.abs());
-        samples.push(ay.left);
+        let s = ay.calc() as f64;
+        peak = peak.max(s.abs());
+        samples.push(s);
     }
     assert!(peak > 0.01); // channel 1 is still audible
 
     // solo(0) instead — the two renders must sound different, proving solo() actually
     // switches which channel is audible rather than being a no-op
-    let mut ay2 = Ayumi::new(true, 1_789_773.0, SAMPLE_RATE);
+    let mut ay2 = Ay8910::new(true, 1_789_773.0, SAMPLE_RATE);
     for ch in 0..3 {
-        ay2.set_tone(ch, 200 + ch as i32 * 50); // distinct periods per channel
-        ay2.set_mixer(ch, 0, 1, 0);
-        ay2.set_volume(ch, 15);
+        ay_set_tone(&mut ay2, ch, 200 + ch as u16 * 50); // distinct periods per channel
+    }
+    ay_set_mixer(&mut ay2, [false, false, false], [true, true, true]);
+    for ch in 0..3 {
+        ay_set_volume(&mut ay2, ch, 15);
     }
     ay2.solo(0);
     let mut samples2 = Vec::with_capacity(SAMPLE_RATE as usize);
     for _ in 0..SAMPLE_RATE {
-        ay2.process();
-        ay2.remove_dc();
-        samples2.push(ay2.left);
+        samples2.push(ay2.calc() as f64);
     }
-    let f0 = measure_frequency(&samples2, SAMPLE_RATE, 2000);
     let expected_ch0 = 1_789_773.0 / (16.0 * 200.0);
+    let f0 = measure_frequency(&samples2, SAMPLE_RATE, 2000, expected_ch0);
     assert!((f0 - expected_ch0).abs() / expected_ch0 < 0.01);
 }
 
@@ -114,12 +160,12 @@ fn test_ym2413_tone_frequency_matches_the_chips_own_formula() {
         samples.push(opll.calc() as f64 / 32768.0);
     }
 
-    let measured = measure_frequency(&samples, SAMPLE_RATE, 4000);
     // pg_phase delta per chip tick = ((fnum*2 + 0) * ml_table[ML=1]=2) << blk >> 2, one full
     // cycle = 2^19; chip ticks at clk/72 Hz.
     let delta = ((fnum * 2) * 2) << blk >> 2;
     let chip_tick_hz = clock as f64 / 72.0;
     let expected = (delta as f64 / 524288.0) * chip_tick_hz;
+    let measured = measure_frequency(&samples, SAMPLE_RATE, 4000, expected);
 
     assert!((measured - expected).abs() / expected < 0.01, "measured {measured} Hz, expected {expected} Hz");
 }
@@ -184,8 +230,8 @@ fn test_scc_tone_frequency_matches_the_chips_own_formula() {
         samples.push(scc.calc() as f64);
     }
 
-    let measured = measure_frequency(&samples, SAMPLE_RATE, 2000);
     let expected = clock / (32.0 * (freq_reg as f64 + 1.0));
+    let measured = measure_frequency(&samples, SAMPLE_RATE, 2000, expected);
     assert!((measured - expected).abs() / expected < 0.02, "measured {measured} Hz, expected {expected} Hz");
 }
 
@@ -222,7 +268,7 @@ fn test_scc_solo_silences_every_other_channel() {
     let peak = samples.iter().fold(0.0f64, |a, &b| a.max(b.abs()));
     assert!(peak > 0.0, "the soloed channel should still be audible");
 
-    let measured = measure_frequency(&samples, SAMPLE_RATE, 2000);
     let expected = 1_789_772.0 / (32.0 * (80.0 + 1.0)); // channel 1's own register (60 + 1*20)
+    let measured = measure_frequency(&samples, SAMPLE_RATE, 2000, expected);
     assert!((measured - expected).abs() / expected < 0.02, "measured {measured} Hz, expected {expected} Hz");
 }

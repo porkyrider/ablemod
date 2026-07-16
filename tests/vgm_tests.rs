@@ -166,7 +166,7 @@ fn test_rejects_a_file_without_the_vgm_magic() {
 #[test]
 fn test_unsupported_chip_commands_are_skipped_not_misparsed() {
     let mut c = Vec::new();
-    c.extend_from_slice(&[0x52, 0x00, 0x01]); // YM2612 port0 write — not emulated, but must skip cleanly
+    c.extend_from_slice(&[0xB2, 0x00, 0x01]); // PWM write — not emulated, but must skip cleanly
     c.extend_from_slice(&[0x51, 0x30, 0x00]); // YM2413 write right after — must still parse correctly
     c.push(0x66);
 
@@ -175,7 +175,7 @@ fn test_unsupported_chip_commands_are_skipped_not_misparsed() {
 
     assert_eq!(vgm.writes.len(), 1); // only the YM2413 write is acted on
     assert_eq!(vgm.writes[0].chip, Chip::Ym2413);
-    assert_eq!(*vgm.unsupported_commands.get(&0x52).unwrap(), 1);
+    assert_eq!(*vgm.unsupported_commands.get(&0xB2).unwrap(), 1);
 }
 
 #[test]
@@ -282,7 +282,7 @@ fn test_vgm_als_export_produces_a_well_formed_project() {
 
     let dir = tempfile::tempdir().unwrap();
     let output = dir.path().join("out.als");
-    ablemod::export::vgm_als::export_als(&vgm, &master, &stems, &output, ablemod::export::als::default_template_bytes()).unwrap();
+    ablemod::export::vgm_als::export_als(&vgm, &master, &stems, &output, ablemod::export::als::default_template_bytes(), true).unwrap();
 
     let bytes = std::fs::read(&output).unwrap();
     let mut decoder = flate2::read::GzDecoder::new(&bytes[..]);
@@ -372,7 +372,7 @@ fn test_vgm_als_export_splits_stems_at_the_loop_point_and_derives_tempo() {
 
     let dir = tempfile::tempdir().unwrap();
     let output = dir.path().join("out.als");
-    ablemod::export::vgm_als::export_als(&vgm, &master, &stems, &output, ablemod::export::als::default_template_bytes()).unwrap();
+    ablemod::export::vgm_als::export_als(&vgm, &master, &stems, &output, ablemod::export::als::default_template_bytes(), true).unwrap();
 
     let bytes = std::fs::read(&output).unwrap();
     let mut decoder = flate2::read::GzDecoder::new(&bytes[..]);
@@ -412,7 +412,7 @@ fn test_vgm_als_export_keeps_one_clip_per_stem_when_no_loop_point_declared() {
 
     let dir = tempfile::tempdir().unwrap();
     let output = dir.path().join("out.als");
-    ablemod::export::vgm_als::export_als(&vgm, &master, &stems, &output, ablemod::export::als::default_template_bytes()).unwrap();
+    ablemod::export::vgm_als::export_als(&vgm, &master, &stems, &output, ablemod::export::als::default_template_bytes(), true).unwrap();
 
     let bytes = std::fs::read(&output).unwrap();
     let mut decoder = flate2::read::GzDecoder::new(&bytes[..]);
@@ -456,7 +456,7 @@ fn test_wavetable_export_recovers_the_waveform_despite_a_premature_key_toggle() 
 
     let dir = tempfile::tempdir().unwrap();
     let output = dir.path().join("out.als");
-    ablemod::export::vgm_als::export_als(&vgm, &master, &stems, &output, ablemod::export::als::default_template_bytes()).unwrap();
+    ablemod::export::vgm_als::export_als(&vgm, &master, &stems, &output, ablemod::export::als::default_template_bytes(), true).unwrap();
 
     let bytes = std::fs::read(&output).unwrap();
     let mut decoder = flate2::read::GzDecoder::new(&bytes[..]);
@@ -519,7 +519,7 @@ fn test_wavetable_export_captures_a_mid_note_waveform_rewrite_as_a_second_frame(
 
     let dir = tempfile::tempdir().unwrap();
     let output = dir.path().join("out.als");
-    ablemod::export::vgm_als::export_als(&vgm, &master, &stems, &output, ablemod::export::als::default_template_bytes()).unwrap();
+    ablemod::export::vgm_als::export_als(&vgm, &master, &stems, &output, ablemod::export::als::default_template_bytes(), true).unwrap();
 
     let bytes = std::fs::read(&output).unwrap();
     let mut decoder = flate2::read::GzDecoder::new(&bytes[..]);
@@ -575,7 +575,7 @@ fn test_wavetable_export_leaves_a_gap_between_legato_retriggered_notes() {
 
     let dir = tempfile::tempdir().unwrap();
     let output = dir.path().join("out.als");
-    ablemod::export::vgm_als::export_als(&vgm, &master, &stems, &output, ablemod::export::als::default_template_bytes()).unwrap();
+    ablemod::export::vgm_als::export_als(&vgm, &master, &stems, &output, ablemod::export::als::default_template_bytes(), true).unwrap();
 
     let bytes = std::fs::read(&output).unwrap();
     let mut decoder = flate2::read::GzDecoder::new(&bytes[..]);
@@ -642,7 +642,7 @@ fn test_wavetable_export_merges_a_leading_burst_of_driver_init_glitch_spans() {
 
     let dir = tempfile::tempdir().unwrap();
     let output = dir.path().join("out.als");
-    ablemod::export::vgm_als::export_als(&vgm, &master, &stems, &output, ablemod::export::als::default_template_bytes()).unwrap();
+    ablemod::export::vgm_als::export_als(&vgm, &master, &stems, &output, ablemod::export::als::default_template_bytes(), true).unwrap();
 
     let bytes = std::fs::read(&output).unwrap();
     let mut decoder = flate2::read::GzDecoder::new(&bytes[..]);
@@ -701,7 +701,7 @@ fn test_wavetable_export_automates_gain_from_the_volume_register() {
 
     let dir = tempfile::tempdir().unwrap();
     let output = dir.path().join("out.als");
-    ablemod::export::vgm_als::export_als(&vgm, &master, &stems, &output, ablemod::export::als::default_template_bytes()).unwrap();
+    ablemod::export::vgm_als::export_als(&vgm, &master, &stems, &output, ablemod::export::als::default_template_bytes(), true).unwrap();
 
     let bytes = std::fs::read(&output).unwrap();
     let mut decoder = flate2::read::GzDecoder::new(&bytes[..]);
@@ -765,7 +765,7 @@ fn test_wavetable_export_absorbs_vibrato_as_pitch_bend_instead_of_retriggering()
 
     let dir = tempfile::tempdir().unwrap();
     let output = dir.path().join("out.als");
-    ablemod::export::vgm_als::export_als(&vgm, &master, &stems, &output, ablemod::export::als::default_template_bytes()).unwrap();
+    ablemod::export::vgm_als::export_als(&vgm, &master, &stems, &output, ablemod::export::als::default_template_bytes(), true).unwrap();
 
     let bytes = std::fs::read(&output).unwrap();
     let mut decoder = flate2::read::GzDecoder::new(&bytes[..]);
@@ -833,7 +833,7 @@ fn test_wavetable_export_tracks_a_volume_envelope_rewritten_across_a_held_note()
 
     let dir = tempfile::tempdir().unwrap();
     let output = dir.path().join("out.als");
-    ablemod::export::vgm_als::export_als(&vgm, &master, &stems, &output, ablemod::export::als::default_template_bytes()).unwrap();
+    ablemod::export::vgm_als::export_als(&vgm, &master, &stems, &output, ablemod::export::als::default_template_bytes(), true).unwrap();
 
     let bytes = std::fs::read(&output).unwrap();
     let mut decoder = flate2::read::GzDecoder::new(&bytes[..]);
@@ -898,7 +898,7 @@ fn test_wavetable_export_splits_a_note_on_volume_re_attack_without_a_key_toggle(
 
     let dir = tempfile::tempdir().unwrap();
     let output = dir.path().join("out.als");
-    ablemod::export::vgm_als::export_als(&vgm, &master, &stems, &output, ablemod::export::als::default_template_bytes()).unwrap();
+    ablemod::export::vgm_als::export_als(&vgm, &master, &stems, &output, ablemod::export::als::default_template_bytes(), true).unwrap();
 
     let bytes = std::fs::read(&output).unwrap();
     let mut decoder = flate2::read::GzDecoder::new(&bytes[..]);
@@ -953,7 +953,7 @@ fn test_wavetable_export_coalesces_a_note_onset_split_across_two_register_writes
 
     let dir = tempfile::tempdir().unwrap();
     let output = dir.path().join("out.als");
-    ablemod::export::vgm_als::export_als(&vgm, &master, &stems, &output, ablemod::export::als::default_template_bytes()).unwrap();
+    ablemod::export::vgm_als::export_als(&vgm, &master, &stems, &output, ablemod::export::als::default_template_bytes(), true).unwrap();
 
     let bytes = std::fs::read(&output).unwrap();
     let mut decoder = flate2::read::GzDecoder::new(&bytes[..]);
@@ -1019,7 +1019,7 @@ fn test_wavetable_export_recovers_a_note_after_a_frequency_byte_split_across_gro
 
     let dir = tempfile::tempdir().unwrap();
     let output = dir.path().join("out.als");
-    ablemod::export::vgm_als::export_als(&vgm, &master, &stems, &output, ablemod::export::als::default_template_bytes()).unwrap();
+    ablemod::export::vgm_als::export_als(&vgm, &master, &stems, &output, ablemod::export::als::default_template_bytes(), true).unwrap();
 
     let bytes = std::fs::read(&output).unwrap();
     let mut decoder = flate2::read::GzDecoder::new(&bytes[..]);
@@ -1078,7 +1078,7 @@ fn test_wavetable_export_ignores_a_mid_note_frequency_byte_split_transient() {
 
     let dir = tempfile::tempdir().unwrap();
     let output = dir.path().join("out.als");
-    ablemod::export::vgm_als::export_als(&vgm, &master, &stems, &output, ablemod::export::als::default_template_bytes()).unwrap();
+    ablemod::export::vgm_als::export_als(&vgm, &master, &stems, &output, ablemod::export::als::default_template_bytes(), true).unwrap();
 
     let bytes = std::fs::read(&output).unwrap();
     let mut decoder = flate2::read::GzDecoder::new(&bytes[..]);
@@ -1125,7 +1125,7 @@ fn export_operator_project(commands: &[u8], total_samples: u32, title: &str) -> 
 
     let dir = tempfile::tempdir().unwrap();
     let output = dir.path().join("out.als");
-    ablemod::export::vgm_als::export_als(&vgm, &master, &stems, &output, ablemod::export::als::default_template_bytes()).unwrap();
+    ablemod::export::vgm_als::export_als(&vgm, &master, &stems, &output, ablemod::export::als::default_template_bytes(), true).unwrap();
 
     let bytes = std::fs::read(&output).unwrap();
     let mut decoder = flate2::read::GzDecoder::new(&bytes[..]);
@@ -1278,4 +1278,227 @@ fn test_operator_export_also_decodes_ym3812_through_the_same_pipeline() {
 
     let notes = key_track_note_counts(midi_tracks[0]);
     assert_eq!(notes, vec![(69, 1)], "expected exactly one A4 note, got {notes:?}");
+}
+
+/// Autocorrelation pitch measurement, same method (and tight search band around a known
+/// prediction) as tests/chips_tests.rs's own `measure_frequency` — see its module comment for
+/// why naive zero-crossing isn't robust enough here.
+fn measure_render_frequency(samples: &[f32], sample_rate: u32, settle: usize, expected_hz: f64) -> f64 {
+    let samples = &samples[settle..];
+    let predicted_period = sample_rate as f64 / expected_hz;
+    let min_lag = (predicted_period * 0.7).max(1.0) as usize;
+    let max_lag = ((predicted_period * 1.4) as usize).min(samples.len() / 2);
+
+    let mut best_lag = min_lag;
+    let mut best_corr = f64::MIN;
+    for lag in min_lag..max_lag {
+        let corr: f64 = (0..samples.len() - lag).map(|i| samples[i] as f64 * samples[i + lag] as f64).sum();
+        if corr > best_corr {
+            best_corr = corr;
+            best_lag = lag;
+        }
+    }
+    sample_rate as f64 / best_lag as f64
+}
+
+#[test]
+fn test_render_uses_the_corrected_scc_clock_not_the_raw_header_value() {
+    // build_vgm's own header always writes a bogus K051649 clock (1_789_772 — the AY8910's own
+    // clock, exactly half the real SCC hardware clock) at 0x9C, the same real-world bug pattern
+    // formats::vgm::parse corrects (see its own comment). export::vgm_render hands libvgm's
+    // player the *raw* file bytes directly — this is a real regression this project's own
+    // player migration reintroduced (caught by ear on a real file) until it patched a copy of
+    // those bytes with the already-corrected clock before handing them off (see
+    // export::vgm_render's own player_ready_bytes comment). If that patch ever regresses, this
+    // test measures exactly half the expected frequency instead of failing some unrelated way.
+    let freq_reg: u32 = 99;
+    let mut c = Vec::new();
+    for i in 0..32u8 {
+        let phase = i as f64 / 32.0 * std::f64::consts::TAU;
+        let sample = (phase.sin() * 120.0).round() as i8;
+        c.extend_from_slice(&[0xD2, 0, i, sample as u8]);
+    }
+    c.extend_from_slice(&[0xD2, 1, 0, (freq_reg & 0xFF) as u8]);
+    c.extend_from_slice(&[0xD2, 1, 1, ((freq_reg >> 8) & 0x0F) as u8]);
+    c.extend_from_slice(&[0xD2, 2, 0, 15]); // channel 0 volume = max
+    c.extend_from_slice(&[0xD2, 3, 0, 0b0000_0001]); // key on channel 0 only
+    c.extend_from_slice(&[0x61, 0x44, 0xAC]); // wait 44100 samples
+    c.push(0x66);
+
+    let data = build_vgm(&c, 44100, None, "SCC Octave Regression");
+    let vgm = vgm::parse(&data).unwrap();
+    assert_eq!(vgm.scc_clock, 3_579_545, "sanity check: formats::vgm::parse's own correction");
+
+    let audio = ablemod::export::vgm_render::render(&vgm);
+    let expected = vgm.scc_clock as f64 / (32.0 * (freq_reg as f64 + 1.0));
+    let measured = measure_render_frequency(&audio.left, 44100, 2000, expected);
+    assert!(
+        (measured - expected).abs() / expected < 0.02,
+        "measured {measured} Hz, expected {expected} Hz (a ratio near 0.5 here means the raw \
+         header's uncorrected clock leaked into the render again)"
+    );
+}
+
+/// Patches a chip clock field into `data` at the given header offset — build_vgm() only sets
+/// the five original chips' own clock fields; tests for chips added afterward patch their own
+/// in directly (mirroring how test_render_uses_the_corrected_scc_clock_not_the_raw_header_value
+/// already patches 0x9C by hand). `data` must already be at least `offset + 4` bytes, which
+/// build_vgm()'s own fixed DATA_START=0xC0 header region guarantees for every offset used below.
+fn patch_clock(data: &mut [u8], offset: usize, clock: u32) {
+    data[offset..offset + 4].copy_from_slice(&clock.to_le_bytes());
+}
+
+/// GameBoy DMG and NES APU's own clock fields were added in VGM v1.61 (see
+/// formats::vgm::parse's own version-gate comment) — build_vgm() always stamps v1.51, so tests
+/// touching either of those two chips must bump the version themselves or their patched clock
+/// is silently ignored.
+fn patch_version(data: &mut [u8], version: u32) {
+    data[0x08..0x0C].copy_from_slice(&version.to_le_bytes());
+}
+
+/// One well-formed register write per newly-linked chip (see build.rs's own comment on why
+/// these ten were added after the original five) — enough to exercise
+/// formats::vgm::parse's own presence-via-actual-write gating (see
+/// test_ignores_a_nonzero_header_clock_for_a_chip_with_no_actual_writes for why header-clock
+/// alone isn't trusted) without needing a full, musically-correct register sequence for every
+/// one of them.
+#[test]
+fn test_recognizes_presence_of_each_newly_linked_chip_via_its_own_command_bytes() {
+    let cases: [(u8, u8, usize, u32, fn(&vgm::VgmFile) -> u32); 7] = [
+        (0x54, 0x28, 0x30, 3_579_545, |v| v.ym2151_clock), // YM2151 (OPM)
+        (0x55, 0x28, 0x44, 3_579_545, |v| v.ym2203_clock), // YM2203 (OPN)
+        (0x56, 0x28, 0x48, 8_000_000, |v| v.ym2608_clock), // YM2608 (OPNA), port 0
+        (0x58, 0x28, 0x4C, 8_000_000, |v| v.ym2610_clock), // YM2610 (OPNB), port 0
+        (0xB0, 0x00, 0x40, 12_500_000, |v| v.rf5c68_clock),
+        (0xB1, 0x00, 0x6C, 12_500_000, |v| v.rf5c164_clock),
+        (0xB3, 0x14, 0x80, 4_194_304, |v| v.gb_dmg_clock),
+    ];
+    for (cmd, reg, clock_offset, clock, get) in cases {
+        let mut c = Vec::new();
+        c.extend_from_slice(&[cmd, reg, 0x00]);
+        c.push(0x66);
+        let mut data = build_vgm(&c, 0, None, "t");
+        patch_version(&mut data, 0x161); // covers every offset used below, including GB DMG's
+        patch_clock(&mut data, clock_offset, clock);
+        let vgm = vgm::parse(&data).expect("command byte {cmd:#04x} must parse");
+        assert_eq!(get(&vgm), clock, "chip driven by command {cmd:#04x} not detected as present");
+    }
+
+    // Sega PCM (0xC0, a memory-write command, not a plain register write — see
+    // formats::vgm::parse's own comment on why it needs its own match arm) and NES APU (0xB4)
+    // checked separately since their command shape/register offsets differ from the table above.
+    let mut c = Vec::new();
+    c.extend_from_slice(&[0xC0, 0x00, 0x00, 0x00]); // Sega PCM memory write
+    c.push(0x66);
+    let mut data = build_vgm(&c, 0, None, "t");
+    patch_clock(&mut data, 0x38, 4_000_000);
+    let vgm = vgm::parse(&data).unwrap();
+    assert_eq!(vgm.segapcm_clock, 4_000_000);
+
+    let mut c = Vec::new();
+    c.extend_from_slice(&[0xB4, 0x15, 0x01]); // NES APU: enable pulse 1
+    c.push(0x66);
+    let mut data = build_vgm(&c, 0, None, "t");
+    patch_version(&mut data, 0x161);
+    patch_clock(&mut data, 0x84, 1_789_773);
+    let vgm = vgm::parse(&data).unwrap();
+    assert_eq!(vgm.nes_apu_clock, 1_789_773);
+}
+
+/// YM2612 (Sega Genesis/Mega Drive OPN2) channel 0 set up as pure additive synthesis
+/// (algorithm 7 — every operator is its own carrier, see fmopn.c's own ALG dispatch), all four
+/// operators at instant attack (AR=31) and zero decay, so the note reaches full volume within
+/// a handful of samples and stays there — enough to prove the fmopn.c core (shared with
+/// YM2203/YM2608/YM2610, see build.rs's own comment) is actually linked and producing sound,
+/// without needing to model a real instrument's modulator chain.
+#[test]
+fn test_ym2612_renders_audible_output() {
+    let mut c = Vec::new();
+    c.extend_from_slice(&[0x52, 0xB0, 0x07]); // ch0: algorithm=7 (additive), feedback=0
+    for reg in [0x30, 0x34, 0x38, 0x3C] {
+        c.extend_from_slice(&[0x52, reg, 0x01]); // all 4 slots: DT=0, MUL=1
+    }
+    for reg in [0x40, 0x44, 0x48, 0x4C] {
+        c.extend_from_slice(&[0x52, reg, 0x00]); // all 4 slots: TL=0 (loudest)
+    }
+    for reg in [0x50, 0x54, 0x58, 0x5C] {
+        c.extend_from_slice(&[0x52, reg, 0x1F]); // all 4 slots: RS=0, AR=31 (instant attack)
+    }
+    for reg in [0x60, 0x64, 0x68, 0x6C] {
+        c.extend_from_slice(&[0x52, reg, 0x00]); // all 4 slots: DR=0 (no decay)
+    }
+    for reg in [0x70, 0x74, 0x78, 0x7C] {
+        c.extend_from_slice(&[0x52, reg, 0x00]); // all 4 slots: SR=0 (no further decay)
+    }
+    for reg in [0x80, 0x84, 0x88, 0x8C] {
+        c.extend_from_slice(&[0x52, reg, 0x0F]); // all 4 slots: SL=0 (full sustain), RR=15
+    }
+    c.extend_from_slice(&[0x52, 0xA4, 0x23]); // ch0 block=4, fnum high bits
+    c.extend_from_slice(&[0x52, 0xA0, 0xE8]); // ch0 fnum low bits
+    c.extend_from_slice(&[0x52, 0x28, 0xF0]); // key on ch0, all 4 slots
+    c.extend_from_slice(&[0x61, 0x44, 0xAC]); // wait 44100 samples
+    c.push(0x66);
+
+    let mut data = build_vgm(&c, 44100, None, "YM2612 tone");
+    patch_clock(&mut data, 0x2C, 7_670_454); // real Sega Genesis YM2612 clock
+    let vgm = vgm::parse(&data).unwrap();
+    assert_eq!(vgm.ym2612_clock, 7_670_454);
+
+    let audio = ablemod::export::vgm_render::render(&vgm);
+    assert!(audio.left.iter().any(|&x| x != 0.0), "YM2612 channel 0 produced no audible output");
+}
+
+/// GameBoy DMG channel 1 (square wave) at max envelope volume with the length counter halted
+/// (so the note holds rather than expiring) — also exercises NR50/NR51/NR52 (master
+/// volume/panning/power), which real hardware powers up with disabled (silent) rather than
+/// libvgm's core defaulting them on, unlike the FM chips above.
+#[test]
+fn test_gameboy_dmg_renders_audible_output() {
+    // libvgm's gb_mame.c indexes registers by NRxx *index* (NR10=0x00, NR11=0x01, ...,
+    // NR50=0x14, NR51=0x15, NR52=0x16 — see its own #define block), not by GB memory-map
+    // address (0xFF10-0xFF26) — a different convention from every other chip in this file.
+    // NR52 (power) must be written first: the core only accepts writes to NR52 itself and the
+    // length registers (NR11/21/31/41) while the sound controller is off.
+    let mut c = Vec::new();
+    c.extend_from_slice(&[0xB3, 0x16, 0x80]); // NR52: power on
+    c.extend_from_slice(&[0xB3, 0x15, 0xFF]); // NR51: route channel 1 to both L/R
+    c.extend_from_slice(&[0xB3, 0x14, 0x77]); // NR50: max master volume both sides
+    c.extend_from_slice(&[0xB3, 0x01, 0x80]); // NR11: duty 50%
+    c.extend_from_slice(&[0xB3, 0x02, 0xF0]); // NR12: initial volume 15, no envelope sweep
+    c.extend_from_slice(&[0xB3, 0x03, 0x00]); // NR13: freq low
+    c.extend_from_slice(&[0xB3, 0x04, 0x83]); // NR14: trigger, length disabled, freq high bits
+    c.extend_from_slice(&[0x61, 0x44, 0xAC]); // wait 44100 samples
+    c.push(0x66);
+
+    let mut data = build_vgm(&c, 44100, None, "GB tone");
+    patch_version(&mut data, 0x161);
+    patch_clock(&mut data, 0x80, 4_194_304);
+    let vgm = vgm::parse(&data).unwrap();
+    assert_eq!(vgm.gb_dmg_clock, 4_194_304);
+
+    let audio = ablemod::export::vgm_render::render(&vgm);
+    assert!(audio.left.iter().any(|&x| x != 0.0), "GameBoy DMG square 1 produced no audible output");
+}
+
+/// NES APU pulse channel 1 at constant (non-decaying) full volume, length counter halted so
+/// the note holds — $4015 (offset 0x15) is written first to enable the channel, mirroring how
+/// real NES software gates every channel's output independent of that channel's own registers.
+#[test]
+fn test_nes_apu_renders_audible_output() {
+    let mut c = Vec::new();
+    c.extend_from_slice(&[0xB4, 0x15, 0x01]); // $4015: enable pulse 1
+    c.extend_from_slice(&[0xB4, 0x00, 0x3F]); // $4000: duty=0, halt=1, constant volume=15
+    c.extend_from_slice(&[0xB4, 0x02, 0x00]); // $4002: freq low
+    c.extend_from_slice(&[0xB4, 0x03, 0x0A]); // $4003: length load (irrelevant, halted) + freq high
+    c.extend_from_slice(&[0x61, 0x44, 0xAC]); // wait 44100 samples
+    c.push(0x66);
+
+    let mut data = build_vgm(&c, 44100, None, "NES tone");
+    patch_version(&mut data, 0x161);
+    patch_clock(&mut data, 0x84, 1_789_773);
+    let vgm = vgm::parse(&data).unwrap();
+    assert_eq!(vgm.nes_apu_clock, 1_789_773);
+
+    let audio = ablemod::export::vgm_render::render(&vgm);
+    assert!(audio.left.iter().any(|&x| x != 0.0), "NES APU pulse 1 produced no audible output");
 }

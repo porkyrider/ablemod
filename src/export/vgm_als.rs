@@ -40,7 +40,25 @@ const WAVETABLE_TRACK_TEMPLATE_XML: &str = include_str!("../../templates/wavetab
 const OPERATOR_TRACK_TEMPLATE_XML: &str = include_str!("../../templates/operator_track.xml");
 const GROUP_TRACK_TEMPLATE_XML: &str = include_str!("../../templates/group_track.xml");
 
-fn sanitize_filename(name: &str) -> String {
+/// Every generated track's own Mixer fader is pulled down by this much, the same
+/// headroom-baseline idea export::als's own TRACK_VOLUME_DB already applies on the tracker
+/// side (see its own comment) — so stems summing together in Ableton's own mixer don't clip
+/// above 0dB. Applied as a static fader value, not a change to the WAV data itself, so it
+/// stays freely adjustable per-track from inside Ableton afterwards.
+const TRACK_GAIN_DB: f64 = -6.0;
+
+/// Sets a freshly-built track's own `DeviceChain/Mixer/Volume/Manual` (a *linear* gain, not
+/// dB — same convention as export::als::volume_to_gain) to TRACK_GAIN_DB. `./` here is a
+/// direct-child chain from the track root (see xmlutil's own doc comment), so this only ever
+/// touches the track's own top-level Mixer, never a Volume parameter belonging to a plugin
+/// nested inside its device chain (Wavetable/Operator both have their own, unrelated, Volume
+/// elements further down).
+fn apply_track_gain(track: &mut Element) {
+    let gain = 10f64.powf(TRACK_GAIN_DB / 20.0);
+    xmlutil::set_value(track, "./DeviceChain/Mixer/Volume/Manual", &fmt_number(gain));
+}
+
+pub(crate) fn sanitize_filename(name: &str) -> String {
     let safe: String =
         name.chars().map(|c| if c.is_alphanumeric() || c == '-' || c == '_' || c == ' ' { c } else { '_' }).collect();
     let safe = safe.trim();
@@ -136,6 +154,7 @@ fn build_audio_track(template: &Element, id_counter: &mut IdCounter, name: &str,
     // there's no live-recording workflow implied by a VGM render, so nothing needs arming.
     xmlutil::set_value(&mut track, "./DeviceChain/MainSequencer/Recorder/IsArmed", "false");
     xmlutil::set_value(&mut track, "./DeviceChain/FreezeSequencer/Recorder/IsArmed", "false");
+    apply_track_gain(&mut track);
 
     let events_el = xmlutil::find_mut(&mut track, ".//DeviceChain/MainSequencer/Sample/ArrangerAutomation/Events")
         .expect("expected element Events not found in template audio track");
@@ -201,9 +220,9 @@ fn ramp_points(points: &[(f64, f64)], ramp_beats: f64) -> Vec<(f64, f64)> {
 ///
 /// Each of the 32 source samples is held for 32 consecutive output samples within its
 /// block (step/sample-and-hold, not interpolated) rather than smoothed — that stepped
-/// waveform *is* what the real chip outputs (see chips::scc::Channel::tick: the DAC just
-/// holds one 8-bit value until the next tick), and smoothing it away would trade its
-/// characteristic digital edge for a mellower, less faithful tone.
+/// waveform *is* what the real chip outputs (see vendor/libvgm/emu/cores/k051649.c's own
+/// `k051649_update`: the DAC just holds one 8-bit value until the next tick), and smoothing
+/// it away would trade its characteristic digital edge for a mellower, less faithful tone.
 ///
 /// Not peak-normalized: an earlier version scaled each channel's own waveform up to full
 /// scale independently, on the theory that a real game's raw table data is often authored
@@ -264,6 +283,7 @@ fn build_wavetable_track(
     xmlutil::set_value(&mut track, "./TrackUnfolded", "false");
     xmlutil::set_value(&mut track, ".//DeviceChain/MainSequencer/Recorder/IsArmed", "false");
     xmlutil::set_value(&mut track, ".//DeviceChain/FreezeSequencer/Recorder/IsArmed", "false");
+    apply_track_gain(&mut track);
 
     // Patch tuning: the reference patch this template was captured from has its own
     // filter/unison settings for its own musical purposes, which have nothing to do with SCC,
@@ -422,8 +442,9 @@ fn set_operator_voice(track: &mut Element, index: u8, coarse: u8, attack_ms: f64
 }
 
 /// Builds one MIDI track driving Ableton's Operator instrument from a YM3526/OPL channel's
-/// extracted notes — the *only* audible result for this chip (see export::vgm_operator's own
-/// doc comment: unlike SCC/Wavetable there's no bit-accurate chips:: emulator to fall back to).
+/// extracted notes — an approximation kept alongside the bit-accurate WAV render for the same
+/// channel (see export::vgm_operator's own doc comment), same relationship
+/// build_wavetable_track already has with SCC's own WAV render.
 fn build_operator_track(
     template: &Element, id_counter: &mut IdCounter, name: &str, color: i32, channel: &vgm_operator::ChannelTrack, song_end_beat: f64,
 ) -> Element {
@@ -438,6 +459,7 @@ fn build_operator_track(
     xmlutil::set_value(&mut track, "./TrackUnfolded", "false");
     xmlutil::set_value(&mut track, ".//DeviceChain/MainSequencer/Recorder/IsArmed", "false");
     xmlutil::set_value(&mut track, ".//DeviceChain/FreezeSequencer/Recorder/IsArmed", "false");
+    apply_track_gain(&mut track);
 
     // Always a plain 2-operator FM chain (B modulates A, only A is audible) regardless of the
     // source channel's own Connection register — see this module's own doc comment on why
@@ -519,7 +541,16 @@ fn estimate_tempo_bpm(loop_duration_seconds: f64) -> f64 {
 /// all sharing a single gain (see write_wav) so the stems' relative loudness stays intact.
 /// `master` is only used to compute that shared gain from the full mix's own peak, never
 /// written out as its own track.
-pub fn export_als(vgm: &VgmFile, master: &RenderedAudio, stems: &[Stem], output_path: &Path, template_bytes: &[u8]) -> Result<(), String> {
+///
+/// `generate_approximation_tracks` controls the Wavetable (SCC) and Operator (YM3526/YM3812)
+/// native-Ableton-instrument tracks documented as experimental in README.md's own "Experimental
+/// / approximate" section — the bit-accurate WAV tracks are built unconditionally either way.
+/// The real CLI path (see cli.rs) defaults this off, so a fresh conversion only produces the
+/// WAV tracks; tests that specifically exercise Wavetable/Operator extraction pass `true`.
+pub fn export_als(
+    vgm: &VgmFile, master: &RenderedAudio, stems: &[Stem], output_path: &Path, template_bytes: &[u8],
+    generate_approximation_tracks: bool,
+) -> Result<(), String> {
     let mut decoder = flate2::read::GzDecoder::new(template_bytes);
     let mut xml_string = String::new();
     decoder.read_to_string(&mut xml_string).map_err(|e| format!("failed to gunzip template: {e}"))?;
@@ -547,10 +578,6 @@ pub fn export_als(vgm: &VgmFile, master: &RenderedAudio, stems: &[Stem], output_
 
     let audio_track_template = Element::parse(AUDIO_TRACK_TEMPLATE_XML.as_bytes())
         .map_err(|e| format!("failed to parse bundled templates/audio_track.xml: {e}"))?;
-    let wavetable_track_template = Element::parse(WAVETABLE_TRACK_TEMPLATE_XML.as_bytes())
-        .map_err(|e| format!("failed to parse bundled templates/wavetable_track.xml: {e}"))?;
-    let operator_track_template = Element::parse(OPERATOR_TRACK_TEMPLATE_XML.as_bytes())
-        .map_err(|e| format!("failed to parse bundled templates/operator_track.xml: {e}"))?;
     let group_track_template = Element::parse(GROUP_TRACK_TEMPLATE_XML.as_bytes())
         .map_err(|e| format!("failed to parse bundled templates/group_track.xml: {e}"))?;
 
@@ -608,64 +635,74 @@ pub fn export_als(vgm: &VgmFile, master: &RenderedAudio, stems: &[Stem], output_
     // Alongside the bit-accurate WAV render above: an *approximation* of each SCC channel
     // played through Ableton's own Wavetable instrument instead, for A/B comparison — see
     // export::vgm_wavetable and build_wavetable_track for what this can and can't capture.
+    // Off by default in the real CLI path (see this function's own doc comment); tests that
+    // specifically exercise this extraction pass `true`.
     let song_end_beat = master.left.len() as f64 / master.sample_rate as f64 * tempo_bpm / 60.0;
-    let wavetable_channels = vgm_wavetable::extract_channels(vgm, tempo_bpm);
-    let mut wavetable_tracks: Vec<Element> = Vec::new();
-    for (i, channel) in wavetable_channels.iter().enumerate() {
-        if channel.notes.is_empty() {
-            continue;
-        }
-        let name = format!("SCC-{} (Wavetable)", i + 1);
-        let color = (i as i32 + 1).rem_euclid(70);
-        let wav_path = samples_dir.join(format!("wt_scc{}.wav", i + 1));
-        let frame_waveforms: Vec<[i8; 32]> = channel.frames.iter().map(|f| f.waveform).collect();
-        write_wavetable_frames_wav(&frame_waveforms, &wav_path).map_err(|e| format!("failed to write {}: {e}", wav_path.display()))?;
-        wavetable_tracks.push(build_wavetable_track(
-            &wavetable_track_template,
-            &mut id_counter,
-            &name,
-            color,
-            &wav_path,
-            channel,
-            song_end_beat,
-            tempo_bpm,
-        ));
-    }
-    if !wavetable_tracks.is_empty() {
-        let (group, group_id) = build_group_track(&group_track_template, &mut id_counter, "Wavetable", 0);
-        new_tracks.push(group);
-        for mut track in wavetable_tracks {
-            xmlutil::set_value(&mut track, "./TrackGroupId", &group_id);
-            new_tracks.push(track);
-        }
-    }
+    if generate_approximation_tracks {
+        let wavetable_track_template = Element::parse(WAVETABLE_TRACK_TEMPLATE_XML.as_bytes())
+            .map_err(|e| format!("failed to parse bundled templates/wavetable_track.xml: {e}"))?;
+        let operator_track_template = Element::parse(OPERATOR_TRACK_TEMPLATE_XML.as_bytes())
+            .map_err(|e| format!("failed to parse bundled templates/operator_track.xml: {e}"))?;
 
-    // YM3526 (OPL) and/or YM3812 (OPL2) channels through Ableton's Operator instrument — this
-    // project's only audible result for these chips (see export::vgm_operator and
-    // build_operator_track). Both share export::vgm_operator's own extraction pipeline (they're
-    // register-compatible for every field it reads) but are kept as two independent chip
-    // presences/track sets, in case a file genuinely uses both at once.
-    let mut operator_tracks: Vec<Element> = Vec::new();
-    for &(chip, clock, label) in &[(Chip::Ym3526, vgm.ym3526_clock, "OPL"), (Chip::Ym3812, vgm.ym3812_clock, "OPL2")] {
-        if clock == 0 {
-            continue;
-        }
-        let channels = vgm_operator::extract_channels(vgm, chip, clock, tempo_bpm);
-        for (i, channel) in channels.iter().enumerate() {
+        let wavetable_channels = vgm_wavetable::extract_channels(vgm, tempo_bpm);
+        let mut wavetable_tracks: Vec<Element> = Vec::new();
+        for (i, channel) in wavetable_channels.iter().enumerate() {
             if channel.notes.is_empty() {
                 continue;
             }
-            let name = format!("{label}-{} (Operator)", i + 1);
+            let name = format!("SCC-{} (Wavetable)", i + 1);
             let color = (i as i32 + 1).rem_euclid(70);
-            operator_tracks.push(build_operator_track(&operator_track_template, &mut id_counter, &name, color, channel, song_end_beat));
+            let wav_path = samples_dir.join(format!("wt_scc{}.wav", i + 1));
+            let frame_waveforms: Vec<[i8; 32]> = channel.frames.iter().map(|f| f.waveform).collect();
+            write_wavetable_frames_wav(&frame_waveforms, &wav_path).map_err(|e| format!("failed to write {}: {e}", wav_path.display()))?;
+            wavetable_tracks.push(build_wavetable_track(
+                &wavetable_track_template,
+                &mut id_counter,
+                &name,
+                color,
+                &wav_path,
+                channel,
+                song_end_beat,
+                tempo_bpm,
+            ));
         }
-    }
-    if !operator_tracks.is_empty() {
-        let (group, group_id) = build_group_track(&group_track_template, &mut id_counter, "Operator", 0);
-        new_tracks.push(group);
-        for mut track in operator_tracks {
-            xmlutil::set_value(&mut track, "./TrackGroupId", &group_id);
-            new_tracks.push(track);
+        if !wavetable_tracks.is_empty() {
+            let (group, group_id) = build_group_track(&group_track_template, &mut id_counter, "Wavetable", 0);
+            new_tracks.push(group);
+            for mut track in wavetable_tracks {
+                xmlutil::set_value(&mut track, "./TrackGroupId", &group_id);
+                new_tracks.push(track);
+            }
+        }
+
+        // YM3526 (OPL) and/or YM3812 (OPL2) channels through Ableton's Operator instrument — an
+        // approximation kept alongside their own bit-accurate WAV render (see
+        // export::vgm_operator and build_operator_track). Both share export::vgm_operator's own
+        // extraction pipeline (they're register-compatible for every field it reads) but are
+        // kept as two independent chip presences/track sets, in case a file genuinely uses both
+        // at once.
+        let mut operator_tracks: Vec<Element> = Vec::new();
+        for &(chip, clock, label) in &[(Chip::Ym3526, vgm.ym3526_clock, "OPL"), (Chip::Ym3812, vgm.ym3812_clock, "OPL2")] {
+            if clock == 0 {
+                continue;
+            }
+            let channels = vgm_operator::extract_channels(vgm, chip, clock, tempo_bpm);
+            for (i, channel) in channels.iter().enumerate() {
+                if channel.notes.is_empty() {
+                    continue;
+                }
+                let name = format!("{label}-{} (Operator)", i + 1);
+                let color = (i as i32 + 1).rem_euclid(70);
+                operator_tracks.push(build_operator_track(&operator_track_template, &mut id_counter, &name, color, channel, song_end_beat));
+            }
+        }
+        if !operator_tracks.is_empty() {
+            let (group, group_id) = build_group_track(&group_track_template, &mut id_counter, "Operator", 0);
+            new_tracks.push(group);
+            for mut track in operator_tracks {
+                xmlutil::set_value(&mut track, "./TrackGroupId", &group_id);
+                new_tracks.push(track);
+            }
         }
     }
 

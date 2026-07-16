@@ -1,10 +1,11 @@
 //! Extracts each OPL-family channel's register-write log as MIDI note data plus a static
 //! 2-operator FM "patch" snapshot, for driving an Ableton Operator instrument — covers both
 //! YM3526 (OPL) and YM3812 (OPL2), which share an identical register map for every field this
-//! module reads (see extract_channels's own comment). Neither chip has a bit-accurate software
-//! emulator in this project (see chips::) the way YM2413/AY8910/SCC do, so unlike
-//! export::vgm_wavetable this Operator export is the *only* audible result for them, not an
-//! approximation kept alongside a WAV render.
+//! module reads (see extract_channels's own comment). Both chips now also get a real,
+//! bit-accurate WAV render (libvgm's own fmopl.c, see export::vgm_render/build.rs), so this
+//! Operator export is an *approximation* kept alongside it, the same relationship
+//! export::vgm_wavetable already has with SCC's own WAV render — not, as it once was before
+//! that render existed, the only audible result for these chips.
 //!
 //! v1 deliberately keeps a smaller scope than export::vgm_wavetable's SCC handling:
 //!
