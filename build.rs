@@ -137,11 +137,11 @@ fn main() {
     // StrUtils-CPConv_IConv.c (compiled above) needs iconv; zlib is dblk_compr.c's own
     // decompressor. Both are preinstalled system-wide on macOS (Xcode CLT) and most Linux
     // distros' base image under these exact names — `libz.{dylib,so,a}`/`libiconv.{dylib,so,a}`
-    // — so plain `-liconv -lz` finds them there. Windows has neither preinstalled, and vcpkg's
-    // own ports for them (see .github/workflows/release.yml) don't share those Unix names:
-    // vcpkg's zlib produces `zlib.lib`, and its libiconv produces `iconv.lib` (also `charset.lib`,
-    // not needed here — nothing in this codebase's own C sources calls the charset-detection
-    // half of libiconv's API, only the actual conversion functions in DLL/iconv.lib).
+    // — so plain `-liconv -lz` finds them there. Windows has neither preinstalled; vcpkg's own
+    // ports for them (see .github/workflows/release.yml) produce `z.lib`/`iconv.lib` too, same
+    // names as the Unix convention, so no OS-specific branch is actually needed here — just
+    // making sure vcpkg's own lib directory is on the linker's search path (see the workflow's
+    // own $env:LIB addition) is enough.
     println!("cargo:rustc-link-lib=iconv");
-    println!("cargo:rustc-link-lib={}", if cfg!(target_os = "windows") { "zlib" } else { "z" });
+    println!("cargo:rustc-link-lib=z");
 }
