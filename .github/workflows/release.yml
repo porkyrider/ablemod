@@ -74,9 +74,14 @@ jobs:
 
       # windows-latest ships vcpkg preinstalled (VCPKG_INSTALLATION_ROOT) — matches Cargo.toml's
       # windows-specific sdl2 dependency, which uses "use-vcpkg" instead of pkg-config there.
-      - name: Install SDL2 via vcpkg
+      # zlib: not an sdl2 dependency — build.rs's own vendored libvgm C sources (compiled
+      # unconditionally, regardless of preview/gui features) need zlib.h/zlib.lib too, which
+      # macOS/Linux always have preinstalled system-wide (Xcode CLT / most distros' base image)
+      # but Windows has no equivalent of, hence installing it here alongside SDL2 rather than
+      # in build.rs itself.
+      - name: Install SDL2 + zlib + iconv via vcpkg
         run: |
-          & "$env:VCPKG_INSTALLATION_ROOT\vcpkg.exe" install sdl2:x64-windows sdl2-ttf:x64-windows
+          & "$env:VCPKG_INSTALLATION_ROOT\vcpkg.exe" install sdl2:x64-windows sdl2-ttf:x64-windows zlib:x64-windows libiconv:x64-windows
         shell: pwsh
 
       - name: Build
@@ -92,6 +97,10 @@ jobs:
           # x64-windows is vcpkg's dynamic (DLL) triplet — the vcpkg crate requires this env
           # var set explicitly to confirm that's intentional, rather than assuming a static lib.
           $env:VCPKGRS_DYNAMIC = "1"
+          # zlib.h/zlib.lib for build.rs's own cc::Build invocation (see above) — cl.exe reads
+          # these the same way vcvarsall.bat's own INCLUDE/LIB additions work.
+          $env:INCLUDE = "$env:VCPKG_INSTALLATION_ROOT\installed\x64-windows\include;$env:INCLUDE"
+          $env:LIB = "$env:VCPKG_INSTALLATION_ROOT\installed\x64-windows\lib;$env:LIB"
           cargo build --release --features preview,gui --target x86_64-pc-windows-msvc
 
       - name: Package
