@@ -5,7 +5,7 @@ use ablemod::formats::base::Sample;
 fn test_writes_mono_16bit_wav() {
     let sample = Sample {
         index: 1, name: "kick".to_string(), pcm16: vec![0, 0, 255, 127, 0, 128],
-        sample_rate_hz: 8363, loop_start: 0, loop_length: 0, volume: 64, finetune: 0, base_note: 60,
+        sample_rate_hz: 8363, loop_start: 0, loop_length: 0, volume: 64, finetune: 0, base_note: 60, pan: 0.0, volume_envelope: None, panning_envelope: None, fadeout: 0,
     };
     let dir = tempfile::tempdir().unwrap();
     let out_path = dir.path().join("kick.wav");

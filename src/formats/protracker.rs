@@ -233,6 +233,7 @@ fn parse_patterns(
                     volume: if effect_num == 0xC { Some(effect_param) } else { None },
                     effect: if has_effect { Some(effect_num) } else { None },
                     effect_param: if has_effect { Some(effect_param) } else { None },
+                    note_off: false, // MOD has no note-off concept
                 });
             }
             rows.push(row);
@@ -289,6 +290,10 @@ pub fn parse(data: &[u8]) -> Module {
             volume: h.volume,
             finetune: h.finetune,
             base_note: BASE_MIDI_NOTE,
+            pan: 0.0, // MOD has no per-sample panning
+            volume_envelope: None,
+            panning_envelope: None,
+            fadeout: 0,
         });
     }
 

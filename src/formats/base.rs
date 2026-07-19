@@ -6,6 +6,28 @@
 
 use std::collections::BTreeMap;
 
+/// One (tick, value) breakpoint of an instrument envelope. `tick` is envelope-internal
+/// (counted from note trigger, not a song row/tick), `value` is 0-64 for both volume and
+/// panning envelopes (32 = center for panning) — matches FastTracker 2's own convention so
+/// parsers can copy point data through unmodified.
+#[derive(Debug, Clone, Default)]
+pub struct EnvelopePoint {
+    pub tick: u32,
+    pub value: u32,
+}
+
+/// A volume or panning envelope, as authored on a tracker instrument. Cloned into every
+/// `Sample` that shares it (an instrument with several samples duplicates its one envelope
+/// across all of them) rather than referenced — envelopes are small (a handful of points) and
+/// this keeps `Sample` self-contained like every other field on it.
+#[derive(Debug, Clone, Default)]
+pub struct Envelope {
+    pub points: Vec<EnvelopePoint>, // tick-ordered, first point's tick is always 0
+    pub sustain_point: Option<usize>, // index into `points`; freezes the value here while a note is held
+    pub loop_start_point: Option<usize>, // not currently simulated by any exporter, carried for a later pass
+    pub loop_end_point: Option<usize>,
+}
+
 #[derive(Debug, Clone)]
 pub struct Sample {
     pub index: u32, // 1-based, matches tracker sample numbering
@@ -17,6 +39,10 @@ pub struct Sample {
     pub volume: u32,      // 0-64 (tracker convention)
     pub finetune: i32,    // signed, -8..7
     pub base_note: i32,   // MIDI note number this sample is pitched to play at unmodified
+    pub pan: f64,         // -1..1, 0 = center
+    pub volume_envelope: Option<Envelope>,
+    pub panning_envelope: Option<Envelope>,
+    pub fadeout: u32, // per-instrument volume fadeout rate; 0 = none/unused
 }
 
 impl Sample {
@@ -36,6 +62,7 @@ pub struct Cell {
     pub volume: Option<u32>,       // 0-64, None = use sample default
     pub effect: Option<u32>,
     pub effect_param: Option<u32>,
+    pub note_off: bool, // explicit note release (XM Key Off); mutually exclusive with midi_note
 }
 
 #[derive(Debug, Clone, Default)]

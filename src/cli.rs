@@ -8,7 +8,8 @@ use crate::export::notes::compute_song_events;
 use crate::export::wav::{sample_wav_filename, write_sample_wav};
 use crate::formats::base::Module;
 use crate::formats::detect::load_module;
-use crate::formats::protracker::{effect_name, implemented_effect_counts, unimplemented_effect_counts};
+use crate::formats::fasttracker2;
+use crate::formats::protracker;
 use crate::formats::vgm;
 
 /// Convert ProTracker modules or VGM/VGZ chiptune recordings to Ableton Live projects.
@@ -128,7 +129,7 @@ fn print_module_summary(module: &Module) {
     );
 }
 
-fn print_effect_table(counts: &std::collections::BTreeMap<u32, u32>) {
+fn print_effect_table(counts: &std::collections::BTreeMap<u32, u32>, effect_name: fn(u32) -> &'static str) {
     let mut items: Vec<(u32, u32)> = counts.iter().map(|(&k, &v)| (k, v)).collect();
     items.sort_by(|a, b| b.1.cmp(&a.1));
     for (code, count) in items {
@@ -142,23 +143,25 @@ fn print_effect_table(counts: &std::collections::BTreeMap<u32, u32>) {
 }
 
 fn print_effects_report(module: &Module) {
-    if module.source_format != "protracker" {
-        // Effect semantics (which codes ablemod actually simulates) are format-specific;
-        // only ProTracker's are known here so far.
-        return;
-    }
-    let implemented = implemented_effect_counts(module);
+    // Effect semantics (which codes ablemod actually simulates) are format-specific — each
+    // tracker parser module owns its own naming/implemented-effects tables (see this
+    // codebase's existing per-format-parser convention, not shared between formats).
+    let (implemented, unimplemented, effect_name): (_, _, fn(u32) -> &'static str) = match module.source_format.as_str() {
+        "protracker" => (protracker::implemented_effect_counts(module), protracker::unimplemented_effect_counts(module), protracker::effect_name),
+        "fasttracker2" => (fasttracker2::implemented_effect_counts(module), fasttracker2::unimplemented_effect_counts(module), fasttracker2::effect_name),
+        _ => return,
+    };
+
     if !implemented.is_empty() {
         println!("Verbose: effects correctly transcribed:");
-        print_effect_table(&implemented);
+        print_effect_table(&implemented, effect_name);
     } else {
         println!("Verbose: no implemented effects found in this module.");
     }
 
-    let unimplemented = unimplemented_effect_counts(module);
     if !unimplemented.is_empty() {
         println!("Verbose: unimplemented effects found (ignored during playback simulation):");
-        print_effect_table(&unimplemented);
+        print_effect_table(&unimplemented, effect_name);
     } else {
         println!("Verbose: no unimplemented effects found.");
     }

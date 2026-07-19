@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use crate::formats::base::Module;
-use crate::formats::protracker;
+use crate::formats::{fasttracker2, protracker};
 
 fn supported_format(ext: &str) -> Option<&'static str> {
     match ext {
@@ -13,7 +13,7 @@ fn supported_format(ext: &str) -> Option<&'static str> {
 }
 
 fn implemented(fmt: &str) -> bool {
-    fmt == "protracker"
+    matches!(fmt, "protracker" | "fasttracker2")
 }
 
 pub fn detect_format(path: &Path) -> Result<&'static str, String> {
@@ -26,7 +26,7 @@ pub fn detect_format(path: &Path) -> Result<&'static str, String> {
         .ok_or_else(|| format!("Unrecognized module extension: '.{ext}' (expected .mod, .xm or .s3m)"))?;
     if !implemented(fmt) {
         return Err(format!(
-            "{fmt} support (.{ext}) is not implemented yet — only ProTracker (.mod) is supported so far"
+            "{fmt} support (.{ext}) is not implemented yet — only ProTracker (.mod) and FastTracker 2 (.xm) are supported so far"
         ));
     }
     Ok(fmt)
@@ -37,6 +37,7 @@ pub fn load_module(path: &Path) -> Result<Module, String> {
     let data = std::fs::read(path).map_err(|e| format!("failed to read {}: {e}", path.display()))?;
     match fmt {
         "protracker" => Ok(protracker::parse(&data)),
+        "fasttracker2" => Ok(fasttracker2::parse(&data)),
         _ => unreachable!("unreachable: {fmt}"),
     }
 }

@@ -1,5 +1,5 @@
 use ablemod::export::notes::compute_song_events;
-use ablemod::formats::base::{Cell, Module, Pattern, Sample};
+use ablemod::formats::base::{Cell, Envelope, EnvelopePoint, Module, Pattern, Sample};
 
 fn module(patterns: Vec<Pattern>, num_channels: usize, samples: Vec<Sample>, speed: u32, bpm: u32) -> Module {
     let n = patterns.len();
@@ -28,8 +28,12 @@ fn effect(effect: u32, param: u32) -> Cell {
 fn note_with_effect(sample_index: u32, midi_note: i32, volume: u32, effect: u32, param: u32) -> Cell {
     Cell {
         sample_index: Some(sample_index), midi_note: Some(midi_note), volume: Some(volume),
-        effect: Some(effect), effect_param: Some(param),
+        effect: Some(effect), effect_param: Some(param), ..Default::default()
     }
+}
+
+fn key_off() -> Cell {
+    Cell { note_off: true, ..Default::default() }
 }
 
 #[test]
@@ -41,7 +45,7 @@ fn test_overlapping_notes_on_different_channels_get_separate_voices_instead_of_b
     // full natural length and export::als/export::midi give each its own track.
     let long_sample = Sample {
         index: 1, name: "pad".to_string(), pcm16: vec![0u8; 2 * 44100 * 10], sample_rate_hz: 44100,
-        loop_start: 0, loop_length: 0, volume: 64, finetune: 0, base_note: 60,
+        loop_start: 0, loop_length: 0, volume: 64, finetune: 0, base_note: 60, pan: 0.0, volume_envelope: None, panning_envelope: None, fadeout: 0,
     };
     let row0 = vec![note(1, 60, 64), cell()];
     let row1 = vec![cell(), note(1, 64, 64)]; // different channel, shortly after
@@ -72,7 +76,7 @@ fn test_simultaneous_notes_each_get_their_own_voice() {
     // to the end of the song regardless, none of the earlier voices are free for it either.
     let looped = Sample {
         index: 1, name: "pad".to_string(), pcm16: vec![0u8; 100], sample_rate_hz: 44100,
-        loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60,
+        loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60, pan: 0.0, volume_envelope: None, panning_envelope: None, fadeout: 0,
     }; // has_loop=True
     let row0 = vec![note(1, 60, 64), note(1, 64, 64), cell()];
     let row1 = vec![cell(), cell(), note(1, 67, 64)];
@@ -97,7 +101,7 @@ fn test_c00_cuts_the_currently_held_note_dead() {
     // of ringing on to the natural-length cap or the next channel event.
     let looped = Sample {
         index: 1, name: "pad".to_string(), pcm16: vec![0u8; 100], sample_rate_hz: 44100,
-        loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60,
+        loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60, pan: 0.0, volume_envelope: None, panning_envelope: None, fadeout: 0,
     };
     let note_on = note(1, 60, 64);
     let kill = effect(0xC, 0);
@@ -121,7 +125,7 @@ fn test_c00_alongside_a_new_note_does_not_suppress_it() {
     // crash; the new note should still appear (current behaviour: floored to velocity 1).
     let sample = Sample {
         index: 1, name: "kick".to_string(), pcm16: vec![0u8; 100], sample_rate_hz: 44100,
-        loop_start: 0, loop_length: 0, volume: 64, finetune: 0, base_note: 60,
+        loop_start: 0, loop_length: 0, volume: 64, finetune: 0, base_note: 60, pan: 0.0, volume_envelope: None, panning_envelope: None, fadeout: 0,
     };
     let note_and_kill = note_with_effect(1, 60, 0, 0xC, 0);
     let pattern = Pattern { rows: vec![vec![note_and_kill]] };
@@ -138,7 +142,7 @@ fn test_c00_alongside_a_new_note_does_not_suppress_it() {
 fn test_portamento_up_bends_the_held_note_without_retriggering_it() {
     let looped = Sample {
         index: 1, name: "pad".to_string(), pcm16: vec![0u8; 100], sample_rate_hz: 44100,
-        loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60,
+        loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60, pan: 0.0, volume_envelope: None, panning_envelope: None, fadeout: 0,
     };
     let note_on = note(1, 60, 64);
     let slide = effect(0x1, 48); // portamento up
@@ -176,7 +180,7 @@ fn test_portamento_moves_the_period_by_the_raw_parameter_per_tick() {
     // period slides this exporter works in.
     let looped = Sample {
         index: 1, name: "pad".to_string(), pcm16: vec![0u8; 100], sample_rate_hz: 44100,
-        loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60,
+        loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60, pan: 0.0, volume_envelope: None, panning_envelope: None, fadeout: 0,
     };
     let note_on = note(1, 60, 64);
     let slide = effect(0x1, 1); // smallest possible portamento step
@@ -195,7 +199,7 @@ fn test_portamento_moves_the_period_by_the_raw_parameter_per_tick() {
 fn test_portamento_down_bends_flat() {
     let looped = Sample {
         index: 1, name: "pad".to_string(), pcm16: vec![0u8; 100], sample_rate_hz: 44100,
-        loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60,
+        loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60, pan: 0.0, volume_envelope: None, panning_envelope: None, fadeout: 0,
     };
     let note_on = note(1, 60, 64);
     let slide = effect(0x2, 48); // portamento down
@@ -214,7 +218,7 @@ fn test_portamento_up_param_zero_repeats_the_last_nonzero_rate() {
     // ft2-clone's pitchSlideUp() source (`if (param == 0) param = ch->pitchSlideUpSpeed;`).
     let looped = Sample {
         index: 1, name: "pad".to_string(), pcm16: vec![0u8; 100], sample_rate_hz: 44100,
-        loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60,
+        loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60, pan: 0.0, volume_envelope: None, panning_envelope: None, fadeout: 0,
     };
     let note_on = note(1, 60, 64);
     let slide = effect(0x1, 48);
@@ -232,7 +236,7 @@ fn test_portamento_up_param_zero_repeats_the_last_nonzero_rate() {
 fn test_portamento_down_param_zero_repeats_the_last_nonzero_rate() {
     let looped = Sample {
         index: 1, name: "pad".to_string(), pcm16: vec![0u8; 100], sample_rate_hz: 44100,
-        loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60,
+        loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60, pan: 0.0, volume_envelope: None, panning_envelope: None, fadeout: 0,
     };
     let note_on = note(1, 60, 64);
     let slide = effect(0x2, 48);
@@ -253,7 +257,7 @@ fn test_portamento_up_and_down_keep_independent_memories() {
     // pick up the rate a previous Portamento *Up* used, even though both touch the same period.
     let looped = Sample {
         index: 1, name: "pad".to_string(), pcm16: vec![0u8; 100], sample_rate_hz: 44100,
-        loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60,
+        loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60, pan: 0.0, volume_envelope: None, panning_envelope: None, fadeout: 0,
     };
     let note_on = note(1, 60, 64);
     let slide_up = effect(0x1, 48);
@@ -270,7 +274,7 @@ fn test_portamento_up_and_down_keep_independent_memories() {
 fn test_portamento_with_no_currently_held_note_is_a_no_op() {
     let sample = Sample {
         index: 1, name: "pad".to_string(), pcm16: vec![0u8; 100], sample_rate_hz: 44100,
-        loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60,
+        loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60, pan: 0.0, volume_envelope: None, panning_envelope: None, fadeout: 0,
     };
     let slide = effect(0x1, 48); // nothing playing on this channel yet
     let m = module_default(vec![Pattern { rows: vec![vec![slide]] }], 1, vec![sample]);
@@ -284,7 +288,7 @@ fn test_portamento_with_no_currently_held_note_is_a_no_op() {
 fn test_same_pitch_notes_still_respect_natural_length_cap_when_far_apart() {
     let short_sample = Sample {
         index: 1, name: "kick".to_string(), pcm16: vec![0u8; 4410 * 2], sample_rate_hz: 44100,
-        loop_start: 0, loop_length: 0, volume: 64, finetune: 0, base_note: 60,
+        loop_start: 0, loop_length: 0, volume: 64, finetune: 0, base_note: 60, pan: 0.0, volume_envelope: None, panning_envelope: None, fadeout: 0,
     }; // 0.1s = 0.1 beat @ 60bpm
     let empty = cell();
     let note_on = note(1, 60, 64);
@@ -306,7 +310,7 @@ fn test_same_pitch_notes_still_respect_natural_length_cap_when_far_apart() {
 fn test_set_panning_on_a_new_note() {
     let sample = Sample {
         index: 1, name: "pad".to_string(), pcm16: vec![0u8; 100], sample_rate_hz: 44100,
-        loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60,
+        loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60, pan: 0.0, volume_envelope: None, panning_envelope: None, fadeout: 0,
     };
     let note_on = note_with_effect(1, 60, 64, 0x8, 255); // hard right
     let m = module_default(vec![Pattern { rows: vec![vec![note_on]] }], 1, vec![sample]);
@@ -324,7 +328,7 @@ fn test_set_panning_on_a_new_note() {
 fn test_set_panning_on_a_held_note_without_retriggering() {
     let looped = Sample {
         index: 1, name: "pad".to_string(), pcm16: vec![0u8; 100], sample_rate_hz: 44100,
-        loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60,
+        loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60, pan: 0.0, volume_envelope: None, panning_envelope: None, fadeout: 0,
     };
     let note_on = note(1, 60, 64);
     let pan_left = effect(0x8, 0); // hard left, no new note
@@ -342,7 +346,7 @@ fn test_set_panning_on_a_held_note_without_retriggering() {
 fn test_set_volume_cxx_jumps_the_held_note_without_retriggering() {
     let looped = Sample {
         index: 1, name: "pad".to_string(), pcm16: vec![0u8; 100], sample_rate_hz: 44100,
-        loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60,
+        loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60, pan: 0.0, volume_envelope: None, panning_envelope: None, fadeout: 0,
     };
     let note_on = note(1, 60, 64);
     let set_vol = effect(0xC, 32); // half volume, no new note
@@ -361,7 +365,7 @@ fn test_set_volume_cxx_jumps_the_held_note_without_retriggering() {
 fn test_volume_slide_ramps_the_held_note_per_tick() {
     let looped = Sample {
         index: 1, name: "pad".to_string(), pcm16: vec![0u8; 100], sample_rate_hz: 44100,
-        loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60,
+        loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60, pan: 0.0, volume_envelope: None, panning_envelope: None, fadeout: 0,
     };
     let note_on = note(1, 60, 32);
     let slide_down = effect(0xA, 0x04); // low nibble: slide down 4/tick
@@ -380,7 +384,7 @@ fn test_volume_slide_ramps_the_held_note_per_tick() {
 fn test_volume_slide_clamps_to_0_and_64() {
     let looped = Sample {
         index: 1, name: "pad".to_string(), pcm16: vec![0u8; 100], sample_rate_hz: 44100,
-        loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60,
+        loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60, pan: 0.0, volume_envelope: None, panning_envelope: None, fadeout: 0,
     };
     let note_on = note(1, 60, 2);
     let slide_down = effect(0xA, 0x0F); // would go well below 0
@@ -396,7 +400,7 @@ fn test_volume_slide_clamps_to_0_and_64() {
 fn test_volume_slide_first_tick_does_not_glide_but_later_ticks_do() {
     let looped = Sample {
         index: 1, name: "pad".to_string(), pcm16: vec![0u8; 100], sample_rate_hz: 44100,
-        loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60,
+        loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60, pan: 0.0, volume_envelope: None, panning_envelope: None, fadeout: 0,
     };
     let note_on = note(1, 60, 64);
     let slide_down = effect(0xA, 0x04);
@@ -413,7 +417,7 @@ fn test_volume_slide_first_tick_does_not_glide_but_later_ticks_do() {
 fn test_volume_slide_glides_across_a_row_boundary_when_reapplied_next_row() {
     let looped = Sample {
         index: 1, name: "pad".to_string(), pcm16: vec![0u8; 100], sample_rate_hz: 44100,
-        loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60,
+        loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60, pan: 0.0, volume_envelope: None, panning_envelope: None, fadeout: 0,
     };
     let note_on = note(1, 60, 64);
     let slide_down = effect(0xA, 0x04);
@@ -439,7 +443,7 @@ fn test_volume_slide_param_zero_repeats_the_last_nonzero_rate() {
     // version of this code had) would truncate the whole fade down to just its first row.
     let looped = Sample {
         index: 1, name: "pad".to_string(), pcm16: vec![0u8; 100], sample_rate_hz: 44100,
-        loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60,
+        loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60, pan: 0.0, volume_envelope: None, panning_envelope: None, fadeout: 0,
     };
     let note_on = note(1, 60, 64);
     let slide_down = effect(0xA, 0x04);
@@ -462,7 +466,7 @@ fn test_volume_slide_param_zero_repeats_the_last_nonzero_rate() {
 fn test_volume_slide_param_zero_with_no_prior_rate_is_a_no_op() {
     let looped = Sample {
         index: 1, name: "pad".to_string(), pcm16: vec![0u8; 100], sample_rate_hz: 44100,
-        loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60,
+        loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60, pan: 0.0, volume_envelope: None, panning_envelope: None, fadeout: 0,
     };
     let note_on = note(1, 60, 64);
     let stray = effect(0xA, 0x00); // no earlier Axy on this channel to remember a rate from
@@ -477,7 +481,7 @@ fn test_volume_slide_param_zero_with_no_prior_rate_is_a_no_op() {
 fn test_volume_slide_glide_resets_after_a_gap_row_with_no_slide() {
     let looped = Sample {
         index: 1, name: "pad".to_string(), pcm16: vec![0u8; 100], sample_rate_hz: 44100,
-        loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60,
+        loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60, pan: 0.0, volume_envelope: None, panning_envelope: None, fadeout: 0,
     };
     let note_on = note(1, 60, 64);
     let slide_down = effect(0xA, 0x04);
@@ -500,7 +504,7 @@ fn test_volume_slide_glide_resets_after_a_gap_row_with_no_slide() {
 fn test_set_volume_is_never_a_glide() {
     let looped = Sample {
         index: 1, name: "pad".to_string(), pcm16: vec![0u8; 100], sample_rate_hz: 44100,
-        loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60,
+        loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60, pan: 0.0, volume_envelope: None, panning_envelope: None, fadeout: 0,
     };
     let note_on = note(1, 60, 64);
     let set_volume = effect(0xC, 16);
@@ -517,7 +521,7 @@ fn test_set_volume_is_never_a_glide() {
 fn test_volume_slide_applies_even_on_the_row_that_triggers_the_note() {
     let looped = Sample {
         index: 1, name: "pad".to_string(), pcm16: vec![0u8; 100], sample_rate_hz: 44100,
-        loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60,
+        loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60, pan: 0.0, volume_envelope: None, panning_envelope: None, fadeout: 0,
     };
     let note_and_slide = note_with_effect(1, 60, 64, 0xA, 0x04);
     let m = module(vec![Pattern { rows: vec![vec![note_and_slide]] }], 1, vec![looped], 6, 60);
@@ -533,7 +537,7 @@ fn test_volume_slide_applies_even_on_the_row_that_triggers_the_note() {
 fn test_a_retriggered_note_starts_its_volume_slide_as_a_step_not_a_glide() {
     let looped = Sample {
         index: 1, name: "pad".to_string(), pcm16: vec![0u8; 100], sample_rate_hz: 44100,
-        loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60,
+        loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60, pan: 0.0, volume_envelope: None, panning_envelope: None, fadeout: 0,
     };
     let note_a = note(1, 60, 64);
     let slide = effect(0xA, 0x04);
@@ -551,7 +555,7 @@ fn test_a_retriggered_note_starts_its_volume_slide_as_a_step_not_a_glide() {
 fn test_arpeggio_cycles_base_x_and_y_semitones_per_tick() {
     let looped = Sample {
         index: 1, name: "pad".to_string(), pcm16: vec![0u8; 100], sample_rate_hz: 44100,
-        loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60,
+        loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60, pan: 0.0, volume_envelope: None, panning_envelope: None, fadeout: 0,
     };
     let note_on = note(1, 60, 64);
     let arp = effect(0x0, 0x51); // x=5, y=1
@@ -569,7 +573,7 @@ fn test_arpeggio_cycles_base_x_and_y_semitones_per_tick() {
 fn test_arpeggio_applies_even_on_the_row_that_triggers_the_note() {
     let looped = Sample {
         index: 1, name: "pad".to_string(), pcm16: vec![0u8; 100], sample_rate_hz: 44100,
-        loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60,
+        loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60, pan: 0.0, volume_envelope: None, panning_envelope: None, fadeout: 0,
     };
     let note_with_arp = note_with_effect(1, 60, 64, 0x0, 0x51);
     let m = module(vec![Pattern { rows: vec![vec![note_with_arp]] }], 1, vec![looped], 6, 60);
@@ -584,7 +588,7 @@ fn test_arpeggio_applies_even_on_the_row_that_triggers_the_note() {
 fn test_vibrato_oscillates_and_uses_depth_speed_from_the_nibbles() {
     let looped = Sample {
         index: 1, name: "pad".to_string(), pcm16: vec![0u8; 100], sample_rate_hz: 44100,
-        loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60,
+        loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60, pan: 0.0, volume_envelope: None, panning_envelope: None, fadeout: 0,
     };
     let note_on = note(1, 60, 64);
     let vibrato = effect(0x4, 0x38); // speed nibble=3 (->12/tick), depth nibble=8
@@ -607,7 +611,7 @@ fn test_vibrato_depth_and_speed_persist_when_param_is_zero() {
     // oscillating — it does not stop or reset, unlike Volume Slide/Portamento's param=0.
     let looped = Sample {
         index: 1, name: "pad".to_string(), pcm16: vec![0u8; 100], sample_rate_hz: 44100,
-        loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60,
+        loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60, pan: 0.0, volume_envelope: None, panning_envelope: None, fadeout: 0,
     };
     let note_on = note(1, 60, 64);
     let vibrato = effect(0x4, 0x38);
@@ -625,7 +629,7 @@ fn test_vibrato_depth_and_speed_persist_when_param_is_zero() {
 fn test_vibrato_position_resets_on_a_new_note_trigger() {
     let looped = Sample {
         index: 1, name: "pad".to_string(), pcm16: vec![0u8; 100], sample_rate_hz: 44100,
-        loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60,
+        loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60, pan: 0.0, volume_envelope: None, panning_envelope: None, fadeout: 0,
     };
     let note_a = note(1, 60, 64);
     let vibrato = effect(0x4, 0x38);
@@ -649,7 +653,7 @@ fn test_vibrato_position_resets_on_a_new_note_trigger() {
 fn test_a_retriggered_note_starts_its_vibrato_as_a_step_not_a_glide_from_the_previous_note() {
     let looped = Sample {
         index: 1, name: "pad".to_string(), pcm16: vec![0u8; 100], sample_rate_hz: 44100,
-        loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60,
+        loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60, pan: 0.0, volume_envelope: None, panning_envelope: None, fadeout: 0,
     };
     let note_a = note(1, 60, 64);
     let vibrato = effect(0x4, 0x38);
@@ -667,7 +671,7 @@ fn test_a_retriggered_note_starts_its_vibrato_as_a_step_not_a_glide_from_the_pre
 fn test_vibrato_plus_volume_slide_applies_both_without_touching_vibrato_params() {
     let looped = Sample {
         index: 1, name: "pad".to_string(), pcm16: vec![0u8; 100], sample_rate_hz: 44100,
-        loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60,
+        loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60, pan: 0.0, volume_envelope: None, panning_envelope: None, fadeout: 0,
     };
     let note_on = note(1, 60, 64);
     let vibrato = effect(0x4, 0x38);
@@ -686,7 +690,7 @@ fn test_vibrato_plus_volume_slide_applies_both_without_touching_vibrato_params()
 fn test_tone_portamento_slides_toward_the_target_without_retriggering() {
     let looped = Sample {
         index: 1, name: "pad".to_string(), pcm16: vec![0u8; 100], sample_rate_hz: 44100,
-        loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60,
+        loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60, pan: 0.0, volume_envelope: None, panning_envelope: None, fadeout: 0,
     };
     let note_on = note(1, 60, 64);
     let slide_to = Cell { midi_note: Some(67), effect: Some(0x3), effect_param: Some(0x02), ..Default::default() }; // target B, speed nibble 2 -> 8/tick
@@ -711,7 +715,7 @@ fn test_tone_portamento_slides_toward_the_target_without_retriggering() {
 fn test_tone_portamento_stops_exactly_at_the_target_and_holds() {
     let looped = Sample {
         index: 1, name: "pad".to_string(), pcm16: vec![0u8; 100], sample_rate_hz: 44100,
-        loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60,
+        loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60, pan: 0.0, volume_envelope: None, panning_envelope: None, fadeout: 0,
     };
     let note_on = note(1, 60, 64);
     let slide_to = Cell { midi_note: Some(67), effect: Some(0x3), effect_param: Some(0x02), ..Default::default() };
@@ -734,7 +738,7 @@ fn test_tone_portamento_stops_exactly_at_the_target_and_holds() {
 fn test_tone_portamento_with_nothing_currently_held_is_a_no_op() {
     let sample = Sample {
         index: 1, name: "pad".to_string(), pcm16: vec![0u8; 100], sample_rate_hz: 44100,
-        loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60,
+        loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60, pan: 0.0, volume_envelope: None, panning_envelope: None, fadeout: 0,
     };
     let slide_to = Cell { midi_note: Some(67), effect: Some(0x3), effect_param: Some(0x02), ..Default::default() }; // nothing playing on this channel yet
     let m = module(vec![Pattern { rows: vec![vec![slide_to]] }], 1, vec![sample], 6, 60);
@@ -747,7 +751,7 @@ fn test_tone_portamento_with_nothing_currently_held_is_a_no_op() {
 fn looped_pad() -> Sample {
     Sample {
         index: 1, name: "pad".to_string(), pcm16: vec![0u8; 100], sample_rate_hz: 44100,
-        loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60,
+        loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60, pan: 0.0, volume_envelope: None, panning_envelope: None, fadeout: 0,
     }
 }
 
@@ -1045,5 +1049,104 @@ fn test_note_delay_zero_triggers_normally_at_the_row_start() {
 
     assert_eq!(notes.len(), 1);
     assert_eq!(notes[0].start_beat, 0.0);
+}
+
+fn enveloped_pad(volume_envelope: Option<Envelope>, panning_envelope: Option<Envelope>) -> Sample {
+    Sample { volume_envelope, panning_envelope, ..looped_pad() }
+}
+
+#[test]
+fn test_volume_envelope_attack_points_are_emitted_at_trigger_and_freeze_at_the_sustain_point() {
+    // decay 64 -> 32 -> 0, sustaining at point 1 (value 32) — point 2 (tick 20, value 0) is
+    // the release-only tail and must NOT be emitted yet, since the note is never released here.
+    let env = Envelope {
+        points: vec![
+            EnvelopePoint { tick: 0, value: 64 },
+            EnvelopePoint { tick: 5, value: 32 },
+            EnvelopePoint { tick: 20, value: 0 },
+        ],
+        sustain_point: Some(1),
+        loop_start_point: None,
+        loop_end_point: None,
+    };
+    let sample = enveloped_pad(Some(env), None);
+    let m = module_default(vec![Pattern { rows: vec![vec![note(1, 60, 64)]] }], 1, vec![sample]);
+
+    let song = compute_song_events(&m);
+    let notes = &song.notes_by_sample[&1];
+    assert_eq!(notes.len(), 1);
+
+    let tick_beats = (6.0 / 24.0) / 6.0; // speed=6
+    let volumes: Vec<(f64, i32, bool)> = notes[0].envelope_volumes.iter().map(|v| (v.at_beat, v.tracker_volume, v.glide)).collect();
+    assert_eq!(volumes, vec![(0.0, 64, false), (5.0 * tick_beats, 32, true)]);
+}
+
+#[test]
+fn test_key_off_marks_release_beat_without_ending_the_note() {
+    let sample = looped_pad(); // no envelope: note-off should be a pure no-op on playback
+    let pattern = Pattern { rows: vec![vec![note(1, 60, 64)], vec![key_off()], vec![cell()]] };
+    let m = module_default(vec![pattern], 1, vec![sample]);
+
+    let song = compute_song_events(&m);
+    let notes = &song.notes_by_sample[&1];
+
+    assert_eq!(notes.len(), 1); // key off did not close/retrigger the note
+    let row_beats = 6.0 / 24.0;
+    assert_eq!(notes[0].release_beat, Some(row_beats));
+    assert!(notes[0].volumes.is_empty() && notes[0].envelope_volumes.is_empty()); // no envelope on this sample: nothing to automate
+    // still rings on to the end of the (3-row) song, same as if key off had never happened
+    assert_eq!(notes[0].duration_beat, 3.0 * row_beats);
+}
+
+#[test]
+fn test_key_off_triggers_the_envelopes_release_segment_at_the_current_tick_rate() {
+    let env = Envelope {
+        points: vec![
+            EnvelopePoint { tick: 0, value: 64 },
+            EnvelopePoint { tick: 5, value: 32 }, // sustain
+            EnvelopePoint { tick: 15, value: 0 }, // release-only tail
+        ],
+        sustain_point: Some(1),
+        loop_start_point: None,
+        loop_end_point: None,
+    };
+    let sample = enveloped_pad(Some(env), None);
+    let pattern = Pattern { rows: vec![vec![note(1, 60, 64)], vec![key_off()], vec![cell()]] };
+    let m = module_default(vec![pattern], 1, vec![sample]);
+
+    let song = compute_song_events(&m);
+    let notes = &song.notes_by_sample[&1];
+    assert_eq!(notes.len(), 1);
+
+    let row_beats = 6.0 / 24.0;
+    let tick_beats = row_beats / 6.0;
+    let release_beat = row_beats; // key off is on row 1
+    let volumes: Vec<(f64, i32, bool)> = notes[0].envelope_volumes.iter().map(|v| (v.at_beat, v.tracker_volume, v.glide)).collect();
+    // attack up to and including the sustain point, then the release tail anchored at the key
+    // off beat (offset from the sustain point's own tick, i.e. (15-5)=10 ticks later).
+    assert_eq!(
+        volumes,
+        vec![(0.0, 64, false), (5.0 * tick_beats, 32, true), (release_beat + 10.0 * tick_beats, 0, true)]
+    );
+}
+
+#[test]
+fn test_a_second_key_off_on_an_already_released_note_does_not_duplicate_the_release_segment() {
+    let env = Envelope {
+        points: vec![EnvelopePoint { tick: 0, value: 64 }, EnvelopePoint { tick: 10, value: 0 }],
+        sustain_point: Some(0),
+        loop_start_point: None,
+        loop_end_point: None,
+    };
+    let sample = enveloped_pad(Some(env), None);
+    let pattern = Pattern { rows: vec![vec![note(1, 60, 64)], vec![key_off()], vec![key_off()]] };
+    let m = module_default(vec![pattern], 1, vec![sample]);
+
+    let song = compute_song_events(&m);
+    let notes = &song.notes_by_sample[&1];
+
+    let row_beats = 6.0 / 24.0;
+    assert_eq!(notes[0].release_beat, Some(row_beats)); // the *first* key off, not the second
+    assert_eq!(notes[0].envelope_volumes.len(), 2); // attack point + exactly one release point
 }
 

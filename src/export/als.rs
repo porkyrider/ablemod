@@ -315,49 +315,151 @@ fn find_sampler_track_template(tracks_el: &Element) -> Result<&Element, String> 
         .to_string())
 }
 
+/// Value of a piecewise-linear (beat, value) curve at an arbitrary beat, holding flat before
+/// the first point and after the last — same convention a hardware channel's own automation
+/// already follows implicitly (nothing changes it until the next point).
+fn interpolate_flat(points: &[(f64, f64)], beat: f64) -> f64 {
+    let Some(&(first_beat, first_value)) = points.first() else { return 0.0 };
+    if beat <= first_beat {
+        return first_value;
+    }
+    let &(last_beat, last_value) = points.last().unwrap();
+    if beat >= last_beat {
+        return last_value;
+    }
+    for w in points.windows(2) {
+        let (b0, v0) = w[0];
+        let (b1, v1) = w[1];
+        if beat >= b0 && beat <= b1 {
+            if b1 <= b0 {
+                return v0;
+            }
+            let t = (beat - b0) / (b1 - b0);
+            return v0 + t * (v1 - v0);
+        }
+    }
+    last_value
+}
+
+/// Combines a note's own channel-level automation (`channel` — Volume Slide/Set Volume/Set
+/// Panning, including a Set Panning promoted from XM's volume column) with its instrument
+/// envelope's points (`envelope`), if it has one. Real tracker hardware/software applies an
+/// envelope as an *independent* layer on top of the channel's own effects (multiplied, for
+/// volume; blended, for panning) — never as a competing set of points that overrides them.
+/// Mixing the two into one point list (an earlier version of this code did, since both used to
+/// land in the same `NoteEvent.volumes`/`.pans`) produced exactly that bug: an enabled
+/// envelope's own attack point at a note's trigger beat silently clobbered a same-beat Set
+/// Panning, and a Volume Slide's rising per-tick curve read as broken whenever an envelope's
+/// own points landed nearby. Instead, both curves are sampled at the union of their own
+/// breakpoints (holding flat outside their own defined range, see interpolate_flat) and
+/// combined with `combine` at each one. A merged point only glides if *both* source curves are
+/// gliding at that beat (`glide` defaults to True for a beat one curve doesn't define at all,
+/// so it doesn't force a step the other curve never asked for) — if either side has a genuine
+/// jump there, the combined curve also jumps.
+/// Collapses points sharing (near-)identical beats down to just the *last* one at each beat —
+/// e.g. a note's baseline bracket point and an explicit Set Panning both land at the exact same
+/// trigger beat; the later one (Set Panning) is what's actually in effect from that instant on,
+/// not the first. Preserves order otherwise. Without this, interpolate_flat/glide lookups could
+/// pick whichever of several same-beat points happened to come first in the source list.
+fn collapse_duplicate_beats(points: &[(f64, f64, bool)]) -> Vec<(f64, f64, bool)> {
+    let mut out: Vec<(f64, f64, bool)> = Vec::with_capacity(points.len());
+    for &p in points {
+        if let Some(last) = out.last_mut() {
+            if (last.0 - p.0).abs() < 1e-9 {
+                *last = p;
+                continue;
+            }
+        }
+        out.push(p);
+    }
+    out
+}
+
+fn merge_with_envelope(channel: &[(f64, f64, bool)], envelope: &[(f64, f64, bool)], combine: impl Fn(f64, f64) -> f64) -> Vec<(f64, f64, bool)> {
+    if envelope.is_empty() {
+        return channel.to_vec();
+    }
+    let channel = collapse_duplicate_beats(channel);
+    let envelope = collapse_duplicate_beats(envelope);
+
+    let mut beats: Vec<f64> = channel.iter().map(|p| p.0).chain(envelope.iter().map(|p| p.0)).collect();
+    beats.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    beats.dedup_by(|a, b| (*a - *b).abs() < 1e-9);
+
+    let chan_flat: Vec<(f64, f64)> = channel.iter().map(|p| (p.0, p.1)).collect();
+    let env_flat: Vec<(f64, f64)> = envelope.iter().map(|p| (p.0, p.1)).collect();
+    let glide_of = |points: &[(f64, f64, bool)], beat: f64| -> bool {
+        points.iter().find(|p| (p.0 - beat).abs() < 1e-9).map(|p| p.2).unwrap_or(true)
+    };
+
+    beats
+        .into_iter()
+        .map(|beat| {
+            let value = combine(interpolate_flat(&chan_flat, beat), interpolate_flat(&env_flat, beat));
+            (beat, value, glide_of(&channel, beat) && glide_of(&envelope, beat))
+        })
+        .collect()
+}
+
 /// Every note gets a bracketing point at its *own* trigger volume — not just notes that
 /// happen to carry a Volume Slide/Set Volume effect. The Sampler's velocity response is off
 /// (VolumeVelScale left at 0, see build_track), so a note's MIDI velocity has no audible
 /// effect on its own — without this, a quiet cell.volume/sample.volume note with no volume
 /// *effect* would still play at the flat track baseline as if it were at full volume,
 /// drowning out passages that should sit further back in the mix. Each point carries the
-/// VolumeChange's `glide` flag through to step_points_with_glide. Values are linear gain
-/// (see volume_to_gain), not dB — that's what the Mixer/Volume parameter's FloatEvents
-/// actually store.
+/// VolumeChange's `glide` flag through to step_points_with_glide. An instrument volume
+/// envelope, if any, is combined in separately (see merge_with_envelope) as a 0-64 multiplier
+/// on top of this channel-level curve, not mixed into it — gain conversion (see
+/// volume_to_gain) happens last, after that combination, since the multiply must happen in
+/// linear tracker-volume space, not dB/gain space.
 fn collect_volume_points(notes: &[NoteEvent]) -> Vec<(f64, f64, bool)> {
     let mut points = Vec::new();
     for note in notes {
-        let baseline = volume_to_gain(note.trigger_volume);
-        points.push((note.start_beat, baseline, false));
+        let baseline = note.trigger_volume as f64;
+        let mut channel_points = vec![(note.start_beat, baseline, false)];
         for v in &note.volumes {
-            points.push((v.at_beat, volume_to_gain(v.tracker_volume), v.glide));
+            channel_points.push((v.at_beat, v.tracker_volume as f64, v.glide));
         }
-        points.push((note.start_beat + note.duration_beat, baseline, false));
+        channel_points.push((note.start_beat + note.duration_beat, baseline, false));
+
+        let envelope_points: Vec<(f64, f64, bool)> = note.envelope_volumes.iter().map(|v| (v.at_beat, v.tracker_volume as f64, v.glide)).collect();
+        let combined = merge_with_envelope(&channel_points, &envelope_points, |chan, env| chan * (env / 64.0));
+        points.extend(combined.into_iter().map(|(beat, tracker_volume, glide)| (beat, volume_to_gain(tracker_volume.round() as i32), glide)));
     }
     points.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
     points
 }
 
-/// Panorama points: every note's own bracket baseline is either centered (AmigaPanning::None)
-/// or that note's hardwired-channel pan scaled by the preset's intensity (see amiga_pan) —
-/// with Set Panning (8xx) events overriding on top, same as any other effect. When the
-/// baseline is flat center *and* a note has no 8xx of its own, it's skipped entirely (matching
+/// Panorama points: every note's own bracket baseline is that note's hardwired-channel pan
+/// scaled by the AmigaPanning preset's intensity (see amiga_pan) plus `sample_pan` — the
+/// sample/instrument's own static baseline pan (XM only; always 0.0 for MOD, so this is a
+/// no-op there) — with Set Panning (8xx) events overriding on top, same as any other effect. A
+/// panning envelope, if any, is combined in separately (see merge_with_envelope) as an
+/// *additive* offset from center on top of this channel-level curve (envelope value 32 =
+/// center = no offset), not mixed into it — an enabled panning envelope should nudge whatever
+/// panning is already in effect, not silently override an explicit Set Panning (including one
+/// promoted from XM's own volume column, e.g. "PF"). When the baseline is flat center *and* a
+/// note has no pan events of its own (channel or envelope), it's skipped entirely (matching
 /// collect_bend_points) rather than emitting a redundant flat-center envelope for every note;
-/// once hardwired panning is on, every note needs its own bracket since the baseline itself
-/// carries real information (which channel it's on).
-fn collect_pan_points(notes: &[NoteEvent], amiga_panning: AmigaPanning) -> Vec<(f64, f64)> {
+/// once the baseline itself is nonzero, every note needs its own bracket since the baseline
+/// carries real information (which channel it's on, or the sample's own pan).
+fn collect_pan_points(notes: &[NoteEvent], amiga_panning: AmigaPanning, sample_pan: f64) -> Vec<(f64, f64, bool)> {
     let intensity = amiga_panning.intensity();
     let mut points = Vec::new();
     for note in notes {
-        let baseline = amiga_pan(note.channel, intensity);
-        if note.pans.is_empty() && intensity == 0.0 {
-            continue; // no baseline panning and no Set Panning (8xx) — nothing to automate
+        let baseline = (amiga_pan(note.channel, intensity) + sample_pan).clamp(-1.0, 1.0);
+        if note.pans.is_empty() && note.envelope_pans.is_empty() && baseline == 0.0 {
+            continue; // no baseline panning and no pan events — nothing to automate
         }
-        points.push((note.start_beat, baseline));
+        let mut channel_points = vec![(note.start_beat, baseline, false)];
         for p in &note.pans {
-            points.push((p.at_beat, p.pan));
+            channel_points.push((p.at_beat, p.pan, p.glide));
         }
-        points.push((note.start_beat + note.duration_beat, baseline));
+        channel_points.push((note.start_beat + note.duration_beat, baseline, false));
+
+        let envelope_points: Vec<(f64, f64, bool)> = note.envelope_pans.iter().map(|p| (p.at_beat, p.pan, p.glide)).collect();
+        let combined = merge_with_envelope(&channel_points, &envelope_points, |chan, env| (chan + env).clamp(-1.0, 1.0));
+        points.extend(combined);
     }
     points.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
     points
@@ -383,33 +485,13 @@ fn collect_bend_points(notes: &[NoteEvent]) -> Vec<(f64, f64, bool)> {
     points
 }
 
-/// Insert a hold-point (at the *previous* value) just before every value change, so
-/// Ableton's default linear interpolation between automation points reads as a clean step
-/// instead of a ramp gliding across the whole gap. Appropriate for effects that are instant
-/// jumps in the tracker (Set Volume, Set Panning) — not for genuinely continuous ones like
-/// Portamento, which should stay a smooth glide.
-pub(crate) fn step_points(points: &[(f64, f64)]) -> Vec<(f64, f64)> {
-    if points.is_empty() {
-        return Vec::new();
-    }
-    let epsilon = TEMPO_STEP_EPSILON_BEATS;
-    let mut stepped = vec![points[0]];
-    for w in points.windows(2) {
-        let (_prev_beat, prev_value) = w[0];
-        let (beat, value) = w[1];
-        if value != prev_value {
-            stepped.push((beat - epsilon, prev_value));
-        }
-        stepped.push((beat, value));
-    }
-    stepped
-}
-
-/// Like step_points, but skips the hold-before-jump for a point marked `glide=True` — those
-/// represent one tick of an already-continuous ramp (an ongoing Volume Slide) and must
-/// connect smoothly to the previous point, not read as a discrete step. Points marked
-/// `glide=False` (Set Volume, a slide's own first tick, or a bracket point) still get the
-/// step treatment, same as step_points.
+/// Inserts a hold-point (at the *previous* value) just before every value change marked
+/// `glide=False`, so Ableton's default linear interpolation between automation points reads as
+/// a clean step instead of a ramp gliding across the whole gap — appropriate for effects that
+/// are instant jumps in the tracker (Set Volume, Set Panning, a slide's own first tick after a
+/// gap). Points marked `glide=True` (one tick of an already-continuous ramp: an ongoing Volume
+/// Slide, Portamento, or an instrument envelope's own points) skip the hold-before-jump and
+/// connect smoothly to the previous point instead.
 pub(crate) fn step_points_with_glide(points: &[(f64, f64, bool)]) -> Vec<(f64, f64)> {
     if points.is_empty() {
         return Vec::new();
@@ -684,7 +766,10 @@ fn build_track(
     // baseline.
     {
         let sampler = xmlutil::find_mut(&mut track, ".//MultiSampler").unwrap();
-        xmlutil::set_value(sampler, "./VolumeAndPan/Panorama/Manual", "0");
+        // sample.pan is always 0.0 for MOD (no per-sample panning concept there) — this is
+        // the XM instrument-default-pan baseline, with any 8xx/panning-envelope automation
+        // built below layering on top of it.
+        xmlutil::set_value(sampler, "./VolumeAndPan/Panorama/Manual", &fmt_number(sample.pan));
     }
     let pan_pointee_id = xmlutil::find(&track, ".//MultiSampler/VolumeAndPan/Panorama/AutomationTarget")
         .expect("expected element \"AutomationTarget\" not found in template track")
@@ -813,9 +898,11 @@ fn build_track(
         build_automation_envelope(automation_envelopes_el, &volume_points, &volume_pointee_id, id_counter, volume_to_gain(64));
     }
 
-    // Panorama gets an envelope when AmigaPanning is enabled, or when the track uses Set
-    // Panning (8xx) somewhere even with it off — see collect_pan_points.
-    let pan_points = step_points(&collect_pan_points(events, amiga_panning));
+    // Panorama gets an envelope when AmigaPanning is enabled, the sample has its own nonzero
+    // baseline pan (XM), or the track uses Set Panning (8xx)/a panning envelope somewhere even
+    // without those — see collect_pan_points. step_points_with_glide (not step_points) so a
+    // panning envelope's own points connect smoothly instead of always stepping.
+    let pan_points = step_points_with_glide(&collect_pan_points(events, amiga_panning, sample.pan));
     {
         let automation_envelopes_el = xmlutil::find_mut(&mut track, "./AutomationEnvelopes/Envelopes").unwrap();
         build_automation_envelope(automation_envelopes_el, &pan_points, &pan_pointee_id, id_counter, 0.0);

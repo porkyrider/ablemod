@@ -106,8 +106,18 @@ than silently doing nothing.
 ### ProTracker `.mod` — done
 Full pipeline: `list`, `extract-samples`, `extract-midi`, `convert-als`. Handles the real effect set (arpeggio, portamento, vibrato, volume slides, position jump/pattern break for correct playback-order simulation, ...), splits colliding notes across voice tracks, groups/colors/arms them in the exported project. Convention: MOD period 428 (PT "C-2") = MIDI note 60, 8363 Hz reference sample rate.
 
-### FastTracker `.xm` / ScreamTracker `.s3m` — not started
-Recognized by extension, `detect_format` returns a clean "not implemented yet" error rather than misparsing. No parser exists (`formats::` has no `fasttracker.rs`/`screamtracker.rs`). The tracker-side IR (`formats::base::Module`) was designed to let a new parser plug straight into the existing WAV/MIDI/.als export — that part shouldn't need to change.
+### FastTracker 2 `.xm` — done
+Full pipeline: `list`, `extract-samples`, `extract-midi`, `convert-als` (`formats::fasttracker2`). Reuses `.mod`'s own effect dispatch unchanged for the shared 0x0-0xF set (identical semantics in both formats) plus Key Off (`Kxx`/note 97, translated into note-off tracking); XM's own volume column is folded into the same single effect slot the IR provides, promoting it to the equivalent already-implemented effect (Set Volume/Slide/Panning/Vibrato/Tone Portamento) whenever the row's real effect column is free, and dropped (silently, like any other unimplemented effect) on the rare row where both are used at once. XM's instrument→keymap→sample indirection is resolved at parse time: every `(instrument, note)` pair actually reachable in the song is traced to its concrete raw sample, so a multisample/keyzone-split instrument correctly becomes several separate Sampler tracks rather than just its first sample played at every pitch. Instrument volume/panning envelopes are translated into real Ableton automation (attack shape emitted at note-on, release shape at Key Off, freezing at the envelope's sustain point in between) — the same track-level automation mechanism already used for Volume Slide/Portamento/Vibrato. Per-sample panning (XM's own instrument default-pan byte) is a real per-track Panorama baseline, not the MOD-only synthetic Amiga L/R/R/L faking. Convention: XM note 49 ("C-4" in FT2's own display) = MIDI note 60, same physical pitch `.mod`'s own period-428 anchor uses; per-sample finetune/relative-note is folded into `sample_rate_hz`, same division of labor as `.mod`.
+
+**Known limitations**, all deliberate scope cuts rather than bugs:
+- Only the linear frequency table is simulated — a module declaring the (rare, non-linear) Amiga frequency table still gets the linear-formula pitch math.
+- Ping-pong sample loops are folded into plain forward loops.
+- Envelope loop points (`Lxx`/loop-flagged envelopes) aren't simulated — an envelope plays its authored points once and freezes at the sustain point, never re-looping a middle segment.
+- Volume fadeout isn't applied.
+- Extended effects `G`/`H`/`L`/`P`/`R`/`T`/`X` (global volume, envelope position, panning slide, multi-retrig, tremor, extra-fine portamento) are parsed but not simulated — `--verbose`/`list` reports their occurrence counts like any other unimplemented effect.
+
+### ScreamTracker `.s3m` — not started
+Recognized by extension, `detect_format` returns a clean "not implemented yet" error rather than misparsing. No parser exists (`formats::` has no `screamtracker.rs`). The tracker-side IR (`formats::base::Module`) was designed to let a new parser plug straight into the existing WAV/MIDI/.als export — that part shouldn't need to change, per FastTracker 2's own parser landing this way.
 
 ### VGM / VGZ (chiptune register-dump rips) — chip-by-chip
 
@@ -173,11 +183,11 @@ trusting either.
 2. Bend/vibrato absorption for the Operator export, if real files show the hard-retrigger approximation sounds bad by comparison.
 3. Rhythm-mode decoding for the Operator export specifically (distinct register semantics on channels 6-8) — the WAV render already handles this correctly.
 4. Link more of libvgm's remaining chip cores (Y8950, YMF262/OPL3, Sega Saturn's SCSP, ...) — the FFI/build plumbing is now well-exercised across fifteen chips; each additional one is mostly a `build.rs`/`SNDDEV_*` addition plus a `chips::player_ffi::dev_id` entry and stem-naming in `export::vgm_render`, not new infrastructure.
-5. XM/S3M parsers, reusing the existing tracker IR/export pipeline unchanged.
+5. An S3M parser, reusing the existing tracker IR/export pipeline unchanged — the same way FastTracker 2's own parser landed.
 
 ## Testing
 
-`cargo test` — 145 tests as of this writing, all synthetic/hand-built VGM byte streams and MOD fixtures (no copyrighted game audio in the repo; a `fichiers/` directory of real rips used for manual verification is gitignored). `tests/chips_tests.rs` checks each of the five original chip cores against its own register-frequency formula via autocorrelation (no real hardware to compare against) — this is what caught both real libvgm bugs listed above. The ten chips added afterward are checked more lightly in `tests/vgm_tests.rs` (header-clock/presence detection for all ten, plus a synthetic non-silence check for YM2612/GameBoy DMG/NES APU specifically) rather than a full frequency-formula proof per chip. Several bugs in this project's history were only caught by converting a real file and listening — `cargo test` passing is necessary, not sufficient, evidence of correctness for the chiptune paths above.
+`cargo test` — 155 tests as of this writing, all synthetic/hand-built VGM/MOD/XM byte streams plus a couple of small real fixtures (no copyrighted game audio in the repo; a `fichiers/` directory of real rips used for manual verification is gitignored). `tests/chips_tests.rs` checks each of the five original chip cores against its own register-frequency formula via autocorrelation (no real hardware to compare against) — this is what caught both real libvgm bugs listed above. The ten chips added afterward are checked more lightly in `tests/vgm_tests.rs` (header-clock/presence detection for all ten, plus a synthetic non-silence check for YM2612/GameBoy DMG/NES APU specifically) rather than a full frequency-formula proof per chip. Several bugs in this project's history were only caught by converting a real file and listening — `cargo test` passing is necessary, not sufficient, evidence of correctness for the chiptune paths above.
 
 ## Licensing
 

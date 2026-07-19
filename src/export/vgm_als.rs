@@ -188,10 +188,10 @@ const WAVETABLE_FRAME_SAMPLES: usize = 1024;
 /// How long a Position transition between wavetable frames is spread over — see
 /// build_wavetable_track's own comment on why this is deliberately a short ramp, not an
 /// instant step (unlike Gain/Transpose's step_points_with_glide) and not the tempo-relative
-/// near-zero epsilon step_points uses for tracker automation.
+/// near-zero epsilon step_points_with_glide uses for tracker automation.
 const POSITION_MORPH_SECONDS: f64 = 0.05;
 
-/// Like export::als::step_points, but holds each point's *previous* value starting
+/// Like export::als::step_points_with_glide's step treatment, but holds each point's *previous* value starting
 /// `ramp_beats` before the jump instead of an unnoticeable instant before it — Ableton's
 /// default linear interpolation between the two then reads as a short, deliberate crossfade.
 fn ramp_points(points: &[(f64, f64)], ramp_beats: f64) -> Vec<(f64, f64)> {

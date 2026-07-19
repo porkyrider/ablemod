@@ -10,7 +10,7 @@ fn module(patterns: Vec<Pattern>, num_channels: usize, speed: u32, bpm: u32, sam
         title: "t".to_string(), source_format: "protracker".to_string(), num_channels,
         samples: samples.unwrap_or_else(|| vec![Sample {
             index: 1, name: "s".to_string(), pcm16: vec![0, 0], sample_rate_hz: 8363,
-            loop_start: 0, loop_length: 1, volume: 64, finetune: 0, base_note: 60,
+            loop_start: 0, loop_length: 1, volume: 64, finetune: 0, base_note: 60, pan: 0.0, volume_envelope: None, panning_envelope: None, fadeout: 0,
         }]),
         patterns, order: (0..n as u32).collect(), restart_position: 0, initial_tempo_bpm: bpm, initial_speed_ticks: speed,
     }
@@ -130,7 +130,7 @@ fn test_non_looped_sample_never_sustains_past_its_natural_length() {
     // than the many empty rows the channel holds the note for, so the natural length must win.
     let non_looped = Sample {
         index: 1, name: "kick".to_string(), pcm16: vec![0u8; 4410 * 2], sample_rate_hz: 44100,
-        loop_start: 0, loop_length: 0, volume: 64, finetune: 0, base_note: 60,
+        loop_start: 0, loop_length: 0, volume: 64, finetune: 0, base_note: 60, pan: 0.0, volume_envelope: None, panning_envelope: None, fadeout: 0,
     };
     let empty = Cell::default();
     let note_on = Cell { sample_index: Some(1), midi_note: Some(60), volume: Some(64), ..Default::default() };
@@ -161,7 +161,7 @@ fn test_two_channels_sharing_a_sample_without_overlap_land_on_one_track() {
     // test below, whose two notes *do* overlap even though they're on different channels.)
     let short_sample = Sample {
         index: 1, name: "s".to_string(), pcm16: vec![0u8; 20], sample_rate_hz: 8363,
-        loop_start: 0, loop_length: 0, volume: 64, finetune: 0, base_note: 60,
+        loop_start: 0, loop_length: 0, volume: 64, finetune: 0, base_note: 60, pan: 0.0, volume_envelope: None, panning_envelope: None, fadeout: 0,
     };
     let empty = Cell::default();
     let row0 = vec![Cell { sample_index: Some(1), midi_note: Some(60), volume: Some(64), ..Default::default() }, empty.clone()];
@@ -224,8 +224,8 @@ fn test_two_channels_sharing_a_sample_with_overlap_get_separate_voice_tracks() {
 #[test]
 fn test_sample_number_zero_carries_forward_last_instrument() {
     let samples = vec![
-        Sample { index: 1, name: "kick".to_string(), pcm16: vec![0, 0], sample_rate_hz: 8363, loop_start: 0, loop_length: 0, volume: 64, finetune: 0, base_note: 60 },
-        Sample { index: 2, name: "snare".to_string(), pcm16: vec![0, 0], sample_rate_hz: 8363, loop_start: 0, loop_length: 0, volume: 64, finetune: 0, base_note: 60 },
+        Sample { index: 1, name: "kick".to_string(), pcm16: vec![0, 0], sample_rate_hz: 8363, loop_start: 0, loop_length: 0, volume: 64, finetune: 0, base_note: 60, pan: 0.0, volume_envelope: None, panning_envelope: None, fadeout: 0 },
+        Sample { index: 2, name: "snare".to_string(), pcm16: vec![0, 0], sample_rate_hz: 8363, loop_start: 0, loop_length: 0, volume: 64, finetune: 0, base_note: 60, pan: 0.0, volume_envelope: None, panning_envelope: None, fadeout: 0 },
     ];
     // row0: explicit instrument 2; row1: note with no instrument number (carries instrument 2 forward)
     let pattern = Pattern { rows: vec![
@@ -255,9 +255,9 @@ fn test_sample_number_zero_carries_forward_last_instrument() {
 fn test_panning_and_volume_slide_emit_cc10_and_cc11() {
     let looped = Sample {
         index: 1, name: "pad".to_string(), pcm16: vec![0, 0], sample_rate_hz: 44100,
-        loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60,
+        loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60, pan: 0.0, volume_envelope: None, panning_envelope: None, fadeout: 0,
     };
-    let note_on = Cell { sample_index: Some(1), midi_note: Some(60), volume: Some(64), effect: Some(0x8), effect_param: Some(255) }; // hard right
+    let note_on = Cell { sample_index: Some(1), midi_note: Some(60), volume: Some(64), effect: Some(0x8), effect_param: Some(255), ..Default::default() }; // hard right
     let slide_down = Cell { effect: Some(0xA), effect_param: Some(0x04), ..Default::default() };
     let m = module(vec![Pattern { rows: vec![vec![note_on], vec![slide_down]] }], 1, 6, 125, Some(vec![looped]));
     let dir = tempfile::tempdir().unwrap();

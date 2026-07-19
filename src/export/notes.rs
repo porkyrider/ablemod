@@ -21,7 +21,7 @@
 
 use std::collections::BTreeMap;
 
-use crate::formats::base::{Cell, Module, Sample};
+use crate::formats::base::{Cell, Envelope, Module, Sample};
 use crate::formats::playback::iter_song_rows;
 
 pub const BEATS_PER_ROW: f64 = 6.0 / 24.0; // a row is always a 16th note (4 rows/beat), independent of Speed
@@ -108,7 +108,10 @@ pub struct VolumeChange {
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct PanChange {
     pub at_beat: f64,
-    pub pan: f64, // -1..1, absolute (0 = center), from a Set Panning (8xx) effect
+    pub pan: f64,     // -1..1, absolute (0 = center), from a Set Panning (8xx) effect or an envelope point
+    pub glide: bool,  // True: continues smoothly from the previous PanChange (an XM panning
+                       // envelope's own points) — see VolumeChange's own `glide` doc comment,
+                       // same convention. Set Panning (8xx) is always an instant jump (False).
 }
 
 #[derive(Debug, Clone)]
@@ -131,6 +134,25 @@ pub struct NoteEvent {
     pub bends: Vec<PitchBend>,
     pub volumes: Vec<VolumeChange>,
     pub pans: Vec<PanChange>,
+    // Instrument envelope points, kept *separate* from `volumes`/`pans` above rather than
+    // mixed into them. Real tracker hardware/software applies an instrument envelope as an
+    // independent layer multiplied (volume) or blended (panning) with the channel's own
+    // Volume Slide/Set Volume/Set Panning — not as a competing set of points overriding
+    // whatever the channel effects were doing. Mixing the two into one point list produced
+    // exactly that bug: an enabled envelope's own attack point at a note's trigger beat would
+    // silently clobber a same-beat Set Panning (including one *promoted* from XM's volume
+    // column, e.g. "PF"), and a Volume Slide's rising per-tick curve would read as broken/
+    // reversed whenever it competed with an envelope's own points nearby. See
+    // export::als::merge_with_envelope for where these two independent layers are actually
+    // combined, once, downstream.
+    pub envelope_volumes: Vec<VolumeChange>,
+    pub envelope_pans: Vec<PanChange>,
+    pub release_beat: Option<f64>, // set once, the first time an XM Key Off is seen on this
+                                    // note's channel — does *not* end the note (see the
+                                    // `cell.note_off` branch in compute_song_events); only
+                                    // marks where an instrument envelope's release phase, if
+                                    // any, should begin. None for a note that's still playing
+                                    // when the song ends, or that never receives a Key Off.
 }
 
 impl NoteEvent {
@@ -148,6 +170,9 @@ impl NoteEvent {
             bends: Vec::new(),
             volumes: Vec::new(),
             pans: Vec::new(),
+            envelope_volumes: Vec::new(),
+            envelope_pans: Vec::new(),
+            release_beat: None,
         }
     }
 
@@ -197,6 +222,33 @@ fn pan_from_param(param: u32) -> f64 {
     ((param as f64 - 128.0) / 127.0).clamp(-1.0, 1.0)
 }
 
+fn envelope_pan_to_normalized(value: u32) -> f64 {
+    ((value as f64 - 32.0) / 32.0).clamp(-1.0, 1.0)
+}
+
+/// The "attack" (pre-release) portion of an envelope, emitted once at note-trigger time using
+/// the tick rate in effect *then* — a deliberate simplification (a Speed/BPM change partway
+/// through a long, not-yet-sustained envelope ramp isn't reflected), documented in this
+/// module's own top doc comment. If the envelope has a sustain point, only points up to and
+/// including it are emitted: Ableton holds flat at that value afterward with no further
+/// automation needed, exactly matching a tracker's own "envelope freezes at the sustain point
+/// while the note is held" behavior. Without a sustain point the whole envelope is emitted
+/// unconditionally (it isn't gated on note-off at all).
+fn envelope_attack_points(env: &Envelope, start_beat: f64, beats_per_tick: f64) -> Vec<(f64, u32)> {
+    let end = env.sustain_point.map_or(env.points.len(), |i| i + 1);
+    env.points[..end].iter().map(|p| (start_beat + p.tick as f64 * beats_per_tick, p.value)).collect()
+}
+
+/// The release portion of an envelope (the points *after* the sustain point), anchored at
+/// `release_beat` and using the tick rate in effect *then* (not at trigger time — see
+/// envelope_attack_points). Empty if the envelope has no sustain point, since in that case
+/// everything was already emitted at trigger.
+fn envelope_release_points(env: &Envelope, release_beat: f64, beats_per_tick: f64) -> Vec<(f64, u32)> {
+    let Some(sustain) = env.sustain_point else { return Vec::new() };
+    let sustain_tick = env.points[sustain].tick as f64;
+    env.points[sustain + 1..].iter().map(|p| (release_beat + (p.tick as f64 - sustain_tick) * beats_per_tick, p.value)).collect()
+}
+
 /// Triggers a new note on `ch`, closing whatever was previously held there — the shared core
 /// of a normal same-row note-on *and* a delayed one (Note Delay/EDx defers this call to a
 /// later tick instead of running it inline; Retrigger/E9x calls it again mid-row on top of an
@@ -211,6 +263,7 @@ fn trigger_note(
     active_sample: u32,
     sample: &Sample,
     bpm: f64,
+    beats_per_tick: f64,
     notes_by_sample: &mut BTreeMap<u32, Vec<NoteEvent>>,
     channel_held: &mut [Option<(u32, usize)>],
     channel_period: &mut [Option<f64>],
@@ -242,7 +295,17 @@ fn trigger_note(
         event.max_duration_beat = Some(natural_seconds * (bpm / 60.0));
     }
     if cell.effect == Some(SET_PANNING) {
-        event.pans.push(PanChange { at_beat, pan: pan_from_param(cell.effect_param.unwrap_or(0)) });
+        event.pans.push(PanChange { at_beat, pan: pan_from_param(cell.effect_param.unwrap_or(0)), glide: false });
+    }
+    if let Some(env) = &sample.volume_envelope {
+        for (i, (beat, value)) in envelope_attack_points(env, at_beat, beats_per_tick).into_iter().enumerate() {
+            event.envelope_volumes.push(VolumeChange { at_beat: beat, tracker_volume: value as i32, glide: i != 0 });
+        }
+    }
+    if let Some(env) = &sample.panning_envelope {
+        for (i, (beat, value)) in envelope_attack_points(env, at_beat, beats_per_tick).into_iter().enumerate() {
+            event.envelope_pans.push(PanChange { at_beat: beat, pan: envelope_pan_to_normalized(value), glide: i != 0 });
+        }
     }
     // Sample Offset (9xx) only ever takes effect *at the moment of this trigger* (ft2-clone's
     // triggerNote() is the only place smpStartPos is set) — a 9xx on a row without a new note
@@ -505,7 +568,7 @@ pub fn compute_song_events(module: &Module) -> SongEvents {
                                     if tick == delay_ticks {
                                         let at_beat = beat + tick as f64 * beats_per_tick;
                                         trigger_note(
-                                            at_beat, midi_note, ch, cell, active_sample, sample, bpm,
+                                            at_beat, midi_note, ch, cell, active_sample, sample, bpm, beats_per_tick,
                                             &mut notes_by_sample, &mut channel_held, &mut channel_period,
                                             &mut channel_trigger_volume, &mut channel_current_volume,
                                             &mut channel_vibrato_pos, &mut channel_tremolo_pos,
@@ -523,7 +586,7 @@ pub fn compute_song_events(module: &Module) -> SongEvents {
                     if let Some(sample) = samples_by_index.get(&active_sample) {
                         if notes_by_sample.contains_key(&active_sample) {
                             trigger_note(
-                                beat, midi_note, ch, cell, active_sample, sample, bpm, &mut notes_by_sample,
+                                beat, midi_note, ch, cell, active_sample, sample, bpm, beats_per_tick, &mut notes_by_sample,
                                 &mut channel_held, &mut channel_period, &mut channel_trigger_volume,
                                 &mut channel_current_volume, &mut channel_vibrato_pos, &mut channel_tremolo_pos,
                                 &mut channel_sample_offset,
@@ -539,6 +602,33 @@ pub fn compute_song_events(module: &Module) -> SongEvents {
                             was_portamento_active = false;
                             was_vibrating = false;
                             was_tremoloing = false;
+                        }
+                    }
+                }
+            } else if cell.note_off {
+                // XM Key Off (note value 97, or effect Kxx): does *not* end the note outright
+                // — a channel with no volume/panning envelope just keeps ringing exactly as it
+                // would without this row (matching how MOD, which has no note-off concept at
+                // all, already behaves) — it only marks where an envelope's release phase, if
+                // any, should begin. Guarded so a channel that already released (e.g. two Kxx
+                // rows in a row) doesn't emit a second, overlapping release ramp.
+                if let Some((held_sample, held_idx)) = channel_held[ch] {
+                    let event = &mut notes_by_sample.get_mut(&held_sample).unwrap()[held_idx];
+                    if event.release_beat.is_none() {
+                        event.release_beat = Some(beat);
+                        if let Some(active_sample) = channel_current_sample[ch] {
+                            if let Some(sample) = samples_by_index.get(&active_sample) {
+                                if let Some(env) = &sample.volume_envelope {
+                                    for (rbeat, value) in envelope_release_points(env, beat, beats_per_tick) {
+                                        event.envelope_volumes.push(VolumeChange { at_beat: rbeat, tracker_volume: value as i32, glide: true });
+                                    }
+                                }
+                                if let Some(env) = &sample.panning_envelope {
+                                    for (rbeat, value) in envelope_release_points(env, beat, beats_per_tick) {
+                                        event.envelope_pans.push(PanChange { at_beat: rbeat, pan: envelope_pan_to_normalized(value), glide: true });
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -600,7 +690,7 @@ pub fn compute_song_events(module: &Module) -> SongEvents {
                     let (hs, hi) = channel_held[ch].unwrap();
                     notes_by_sample.get_mut(&hs).unwrap()[hi]
                         .pans
-                        .push(PanChange { at_beat: beat, pan: pan_from_param(cell.effect_param.unwrap_or(0)) });
+                        .push(PanChange { at_beat: beat, pan: pan_from_param(cell.effect_param.unwrap_or(0)), glide: false });
                 }
             }
 
@@ -925,7 +1015,7 @@ pub fn compute_song_events(module: &Module) -> SongEvents {
                                     if tick % sub_param == 0 {
                                         let at_beat = beat + tick as f64 * beats_per_tick;
                                         trigger_note(
-                                            at_beat, pitch, ch, cell, active_sample, sample, bpm,
+                                            at_beat, pitch, ch, cell, active_sample, sample, bpm, beats_per_tick,
                                             &mut notes_by_sample, &mut channel_held, &mut channel_period,
                                             &mut channel_trigger_volume, &mut channel_current_volume,
                                             &mut channel_vibrato_pos, &mut channel_tremolo_pos,

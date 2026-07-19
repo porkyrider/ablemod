@@ -262,8 +262,8 @@ fn test_export_als_volume_and_pan_envelopes() {
     let dir = tempfile::tempdir().unwrap();
     let output = dir.path().join("out.als");
 
-    let looped = Sample { index: 1, name: "pad".to_string(), pcm16: vec![0u8; 100], sample_rate_hz: 44100, loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60 };
-    let note_on = Cell { sample_index: Some(1), midi_note: Some(60), volume: Some(64), effect: Some(0x8), effect_param: Some(255) }; // note + hard-right pan
+    let looped = Sample { index: 1, name: "pad".to_string(), pcm16: vec![0u8; 100], sample_rate_hz: 44100, loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60, pan: 0.0, volume_envelope: None, panning_envelope: None, fadeout: 0 };
+    let note_on = Cell { sample_index: Some(1), midi_note: Some(60), volume: Some(64), effect: Some(0x8), effect_param: Some(255), ..Default::default() }; // note + hard-right pan
     let slide_down = Cell { effect: Some(0xA), effect_param: Some(0x04), ..Default::default() }; // volume slide, no new note
     let pattern = Pattern { rows: vec![vec![note_on], vec![slide_down]] };
     let module = Module {
@@ -298,8 +298,102 @@ fn test_export_als_volume_and_pan_envelopes() {
 }
 
 #[test]
+fn test_a_flat_volume_envelope_does_not_disturb_a_volume_slides_own_shape() {
+    // Regression test: an earlier version of this code mixed an instrument's envelope points
+    // directly into the same point list as the tracker's own Volume Slide/Set Volume/Set
+    // Panning, instead of combining the two as independent layers (multiplicative for volume,
+    // the way real tracker hardware/software actually does it) — an enabled envelope's own
+    // attack point at the note's trigger beat could silently clobber whatever the channel
+    // effects were doing right at that same instant. A perfectly flat, always-64 (i.e.
+    // multiplier == 1.0 throughout) envelope should be fully transparent: the note starts
+    // silent (volume-column Set Volume to 0) and a Volume Slide Up (A10) ramps it up — that
+    // shape must survive completely unchanged.
+    let env = ablemod::formats::base::Envelope {
+        points: vec![ablemod::formats::base::EnvelopePoint { tick: 0, value: 64 }],
+        sustain_point: Some(0),
+        loop_start_point: None,
+        loop_end_point: None,
+    };
+    let enveloped = Sample {
+        index: 1, name: "pad".to_string(), pcm16: vec![0u8; 100], sample_rate_hz: 44100, loop_start: 0, loop_length: 2,
+        volume: 64, finetune: 0, base_note: 60, pan: 0.0, volume_envelope: Some(env), panning_envelope: None, fadeout: 0,
+    };
+    // note + volume-column set-volume 0 (silent start) + effect A10 (volume slide up, rate 1/tick)
+    let fade_in = Cell { sample_index: Some(1), midi_note: Some(60), volume: Some(0), effect: Some(0xA), effect_param: Some(0x10), ..Default::default() };
+    let module = Module {
+        title: "t".to_string(), source_format: "fasttracker2".to_string(), num_channels: 1, samples: vec![enveloped],
+        patterns: vec![Pattern { rows: vec![vec![fade_in]] }], order: vec![0], restart_position: 0, initial_tempo_bpm: 125, initial_speed_ticks: 6,
+    };
+
+    let dir = tempfile::tempdir().unwrap();
+    let output = dir.path().join("out.als");
+    export_als(&module, &output, default_template_bytes(), AmigaPanning::None).unwrap();
+
+    let root = read_als(&output);
+    let track = xmlutil::find(&root, ".//MidiTrack").unwrap();
+    let volume_target = attr(xmlutil::find(track, "./DeviceChain/Mixer/Volume/AutomationTarget").unwrap(), "Id");
+    let envelopes_el = xmlutil::find(track, "./AutomationEnvelopes/Envelopes").unwrap();
+    let volume_env = xmlutil::find_all_children(envelopes_el, "AutomationEnvelope")
+        .into_iter()
+        .find(|e| attr(xmlutil::find(e, "./EnvelopeTarget/PointeeId").unwrap(), "Value") == volume_target)
+        .unwrap();
+    // index 0 is always Ableton's own "value before automation starts" sentinel (see
+    // AUTOMATION_SENTINEL_TIME/build_automation_envelope), not this note's own first point.
+    let values: Vec<f64> = xmlutil::find_all_descendants(volume_env, "FloatEvent")[1..].iter().map(|e| attr(e, "Value").parse().unwrap()).collect();
+
+    let silent_gain = (volume_to_gain(0) * 1e6).round() / 1e6;
+    assert_eq!(values[0], silent_gain); // still starts silent, not clobbered by the envelope's own flat-64 point
+    assert!(values.iter().any(|&v| v > silent_gain)); // and genuinely rises afterward (the slide's own shape survives)
+}
+
+#[test]
+fn test_a_panning_envelope_nudges_set_panning_instead_of_overriding_it() {
+    // Same regression as above, for panning: an enabled panning envelope should *add* its own
+    // (small) deviation from center on top of whatever Set Panning (8xx, or one promoted from
+    // XM's volume column) already set — not silently replace it. Set Panning here targets hard
+    // left (-1.0); the envelope's own single sustained point is worth +0.5 (value 48, since
+    // (48-32)/32 == 0.5) — override behavior would show +0.5 verbatim (losing the hard-left
+    // entirely), combined behavior shows -0.5 (nudged right from hard-left, not replaced).
+    let env = ablemod::formats::base::Envelope {
+        points: vec![ablemod::formats::base::EnvelopePoint { tick: 0, value: 48 }],
+        sustain_point: Some(0),
+        loop_start_point: None,
+        loop_end_point: None,
+    };
+    let enveloped = Sample {
+        index: 1, name: "pad".to_string(), pcm16: vec![0u8; 100], sample_rate_hz: 44100, loop_start: 0, loop_length: 2,
+        volume: 64, finetune: 0, base_note: 60, pan: 0.0, volume_envelope: None, panning_envelope: Some(env), fadeout: 0,
+    };
+    let hard_left = Cell { sample_index: Some(1), midi_note: Some(60), volume: Some(64), effect: Some(0x8), effect_param: Some(0), ..Default::default() };
+    let module = Module {
+        title: "t".to_string(), source_format: "fasttracker2".to_string(), num_channels: 1, samples: vec![enveloped],
+        patterns: vec![Pattern { rows: vec![vec![hard_left]] }], order: vec![0], restart_position: 0, initial_tempo_bpm: 125, initial_speed_ticks: 6,
+    };
+
+    let dir = tempfile::tempdir().unwrap();
+    let output = dir.path().join("out.als");
+    export_als(&module, &output, default_template_bytes(), AmigaPanning::None).unwrap();
+
+    let root = read_als(&output);
+    let track = xmlutil::find(&root, ".//MidiTrack").unwrap();
+    let sampler = xmlutil::find(track, ".//MultiSampler").unwrap();
+    let pan_target = attr(xmlutil::find(sampler, "./VolumeAndPan/Panorama/AutomationTarget").unwrap(), "Id");
+    let envelopes_el = xmlutil::find(track, "./AutomationEnvelopes/Envelopes").unwrap();
+    let pan_env = xmlutil::find_all_children(envelopes_el, "AutomationEnvelope")
+        .into_iter()
+        .find(|e| attr(xmlutil::find(e, "./EnvelopeTarget/PointeeId").unwrap(), "Value") == pan_target)
+        .unwrap();
+    // index 0 is always Ableton's own "value before automation starts" sentinel (see
+    // AUTOMATION_SENTINEL_TIME/build_automation_envelope); index 1 is this note's own first
+    // real point, at the exact trigger beat where the old bug's clobbering happened.
+    let values: Vec<f64> = xmlutil::find_all_descendants(&pan_env, "FloatEvent")[1..].iter().map(|e| attr(e, "Value").parse().unwrap()).collect();
+
+    assert!((values[0] - (-0.5)).abs() < 1e-6, "expected the note's first point to be -0.5 (nudged-from-hard-left), got {values:?}");
+}
+
+#[test]
 fn test_a_quiet_note_without_any_volume_effect_still_plays_quiet() {
-    let looped = Sample { index: 1, name: "pad".to_string(), pcm16: vec![0u8; 100], sample_rate_hz: 44100, loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60 };
+    let looped = Sample { index: 1, name: "pad".to_string(), pcm16: vec![0u8; 100], sample_rate_hz: 44100, loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60, pan: 0.0, volume_envelope: None, panning_envelope: None, fadeout: 0 };
     let quiet_note = Cell { sample_index: Some(1), midi_note: Some(60), volume: Some(16), ..Default::default() }; // 25% of max tracker volume, no effect
     let module = Module {
         title: "t".to_string(), source_format: "protracker".to_string(), num_channels: 1, samples: vec![looped],
@@ -334,7 +428,7 @@ fn test_a_quiet_note_without_any_volume_effect_still_plays_quiet() {
 
 #[test]
 fn test_tempo_automation_steps_instead_of_ramping() {
-    let sample = Sample { index: 1, name: "pad".to_string(), pcm16: vec![0u8; 100], sample_rate_hz: 44100, loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60 };
+    let sample = Sample { index: 1, name: "pad".to_string(), pcm16: vec![0u8; 100], sample_rate_hz: 44100, loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60, pan: 0.0, volume_envelope: None, panning_envelope: None, fadeout: 0 };
     let speed_change = Cell { effect: Some(0xF), effect_param: Some(3), ..Default::default() };
     let speed_back = Cell { effect: Some(0xF), effect_param: Some(6), ..Default::default() };
     let mut rows = vec![Cell::default(); 8].into_iter().map(|c| vec![c]).collect::<Vec<_>>();
@@ -382,7 +476,7 @@ fn test_tempo_automation_steps_instead_of_ramping() {
 
 #[test]
 fn test_patterns_split_into_separate_arrangement_clips() {
-    let looped = Sample { index: 1, name: "pad".to_string(), pcm16: vec![0u8; 100], sample_rate_hz: 44100, loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60 };
+    let looped = Sample { index: 1, name: "pad".to_string(), pcm16: vec![0u8; 100], sample_rate_hz: 44100, loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60, pan: 0.0, volume_envelope: None, panning_envelope: None, fadeout: 0 };
     let note_a = Cell { sample_index: Some(1), midi_note: Some(60), volume: Some(64), ..Default::default() };
     let note_b = Cell { sample_index: Some(1), midi_note: Some(64), volume: Some(64), ..Default::default() };
     let pattern0 = Pattern { rows: vec![vec![note_a], vec![Cell::default()], vec![Cell::default()], vec![Cell::default()]] };
@@ -423,7 +517,7 @@ fn test_patterns_split_into_separate_arrangement_clips() {
 
 #[test]
 fn test_set_volume_and_panning_step_instead_of_ramping() {
-    let looped = Sample { index: 1, name: "pad".to_string(), pcm16: vec![0u8; 100], sample_rate_hz: 44100, loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60 };
+    let looped = Sample { index: 1, name: "pad".to_string(), pcm16: vec![0u8; 100], sample_rate_hz: 44100, loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60, pan: 0.0, volume_envelope: None, panning_envelope: None, fadeout: 0 };
     let note_on = Cell { sample_index: Some(1), midi_note: Some(60), volume: Some(64), ..Default::default() };
     let set_volume = Cell { effect: Some(0xC), effect_param: Some(16), ..Default::default() };
     let set_pan = Cell { effect: Some(0x8), effect_param: Some(255), ..Default::default() }; // hard right, away from the center baseline
@@ -468,7 +562,7 @@ fn test_set_volume_and_panning_step_instead_of_ramping() {
 
 #[test]
 fn test_volume_slide_glides_smoothly_without_a_step_between_ticks() {
-    let looped = Sample { index: 1, name: "pad".to_string(), pcm16: vec![0u8; 100], sample_rate_hz: 44100, loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60 };
+    let looped = Sample { index: 1, name: "pad".to_string(), pcm16: vec![0u8; 100], sample_rate_hz: 44100, loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60, pan: 0.0, volume_envelope: None, panning_envelope: None, fadeout: 0 };
     let note_on = Cell { sample_index: Some(1), midi_note: Some(60), volume: Some(64), ..Default::default() };
     let slide_down = Cell { effect: Some(0xA), effect_param: Some(0x04), ..Default::default() };
     let module = Module {
@@ -564,7 +658,7 @@ fn test_extract_midi_pinballf_does_not_raise() {
 fn overlapping_sample_module() -> Module {
     // two channels trigger the same sample at the exact same beat, needing 2 voices/tracks
     // (see the voice-assignment pass in export::notes::compute_song_events).
-    let looped = Sample { index: 1, name: "pad".to_string(), pcm16: vec![0u8; 100], sample_rate_hz: 44100, loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60 };
+    let looped = Sample { index: 1, name: "pad".to_string(), pcm16: vec![0u8; 100], sample_rate_hz: 44100, loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60, pan: 0.0, volume_envelope: None, panning_envelope: None, fadeout: 0 };
     let row = vec![
         Cell { sample_index: Some(1), midi_note: Some(60), volume: Some(64), ..Default::default() },
         Cell { sample_index: Some(1), midi_note: Some(67), volume: Some(64), ..Default::default() },
@@ -678,7 +772,7 @@ fn test_only_one_track_armed_across_a_multi_sample_project() {
 
 #[test]
 fn test_a_single_voice_sample_is_not_grouped() {
-    let looped = Sample { index: 1, name: "pad".to_string(), pcm16: vec![0u8; 100], sample_rate_hz: 44100, loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60 };
+    let looped = Sample { index: 1, name: "pad".to_string(), pcm16: vec![0u8; 100], sample_rate_hz: 44100, loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60, pan: 0.0, volume_envelope: None, panning_envelope: None, fadeout: 0 };
     let note_on = Cell { sample_index: Some(1), midi_note: Some(60), volume: Some(64), ..Default::default() };
     let module = Module {
         title: "t".to_string(), source_format: "protracker".to_string(), num_channels: 1, samples: vec![looped],
@@ -704,9 +798,9 @@ fn test_sample_offset_sets_the_tracks_own_sample_start() {
     // as SampleStart.
     let long_sample = Sample {
         index: 1, name: "pad".to_string(), pcm16: vec![0u8; 10000], sample_rate_hz: 44100,
-        loop_start: 0, loop_length: 0, volume: 64, finetune: 0, base_note: 60,
+        loop_start: 0, loop_length: 0, volume: 64, finetune: 0, base_note: 60, pan: 0.0, volume_envelope: None, panning_envelope: None, fadeout: 0,
     };
-    let offset_note = Cell { sample_index: Some(1), midi_note: Some(60), volume: Some(64), effect: Some(0x9), effect_param: Some(4) }; // 4*256 = 1024
+    let offset_note = Cell { sample_index: Some(1), midi_note: Some(60), volume: Some(64), effect: Some(0x9), effect_param: Some(4), ..Default::default() }; // 4*256 = 1024
     let module = Module {
         title: "t".to_string(), source_format: "protracker".to_string(), num_channels: 1, samples: vec![long_sample],
         patterns: vec![Pattern { rows: vec![vec![offset_note]] }], order: vec![0], restart_position: 0,
@@ -727,7 +821,7 @@ fn amiga_panning_module() -> Module {
     // separated, unambiguous beats in notes_by_sample — avoids same-beat tie-breaking in the
     // exported automation entirely. None of them use Set Panning (8xx), to isolate the
     // *baseline* pan the AmigaPanning preset assigns.
-    let looped = Sample { index: 1, name: "pad".to_string(), pcm16: vec![0u8; 100], sample_rate_hz: 44100, loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60 };
+    let looped = Sample { index: 1, name: "pad".to_string(), pcm16: vec![0u8; 100], sample_rate_hz: 44100, loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60, pan: 0.0, volume_envelope: None, panning_envelope: None, fadeout: 0 };
     let note = |pitch: i32| Cell { sample_index: Some(1), midi_note: Some(pitch), volume: Some(64), ..Default::default() };
     let empty = Cell::default();
     let rows = vec![
@@ -809,7 +903,7 @@ fn module_with_looped_sample(loop_start: u32, loop_length: u32, total_frames: u3
     }
     let sample = Sample {
         index: 1, name: "loopy".to_string(), pcm16, sample_rate_hz: 8363,
-        loop_start, loop_length, volume: 64, finetune: 0, base_note: 60,
+        loop_start, loop_length, volume: 64, finetune: 0, base_note: 60, pan: 0.0, volume_envelope: None, panning_envelope: None, fadeout: 0,
     };
     let note_on = Cell { sample_index: Some(1), midi_note: Some(60), volume: Some(64), ..Default::default() };
     Module {
