@@ -1,6 +1,9 @@
 # ablemod
 
-A CLI that converts tracker modules and chiptune register-dump rips into Ableton Live projects (`.als`), plus WAV/MIDI extraction along the way.
+Two executables: `ablemod`, a terminal CLI that converts tracker modules and chiptune
+register-dump rips into Ableton Live projects (`.als`), plus WAV/MIDI extraction along the
+way; and `ablemod-gui`, a point-and-click front-end for the same actions (see its own section
+below).
 
 ```
 ablemod list <file>                                          # metadata, chips/effects used, what will/won't convert
@@ -9,9 +12,94 @@ ablemod extract-midi <file.mod> -o <dir>                     # tracker: channels
 ablemod extract-mixed-tracks <file.vgz> -o <mix.wav>         # VGM/VGZ: full chip-emulated mix -> one WAV
 ablemod extract-separated-tracks-wav <file.vgz> -o <dir>     # VGM/VGZ: one WAV per chip channel (stem)
 ablemod convert-als <file> -o <project.als> [--template <template.als>] [--verbose]
+ablemod preview <file.vgz> [--no-loop] [--record out.mp4]    # VGM/VGZ: live waveform preview / video export
 ```
 
-`convert-als` auto-detects the input by extension (`.mod` / `.xm` / `.s3m` / `.vgm` / `.vgz`) and produces a ready-to-open Live Set: audio tracks with Simpler/plain samples for tracker modules, or rendered-audio + approximated-instrument tracks for chiptune rips. `extract-mixed-tracks`/`extract-separated-tracks-wav` give the same chip-emulated audio `convert-als` renders for a VGM/VGZ file, without an Ableton project wrapped around it — there's no equivalent for tracker modules yet (they have no audio-rendering engine of their own; Ableton's own Sampler does that synthesis after `convert-als`), so both are VGM/VGZ-only for now.
+`convert-als` auto-detects the input by extension (`.mod` / `.xm` / `.s3m` / `.vgm` / `.vgz`) and produces a ready-to-open Live Set: audio tracks with Simpler/plain samples for tracker modules, or rendered-audio + approximated-instrument tracks for chiptune rips. `extract-mixed-tracks`/`extract-separated-tracks-wav` give the same chip-emulated audio `convert-als` renders for a VGM/VGZ file, without an Ableton project wrapped around it — there's no equivalent for tracker modules yet (they have no audio-rendering engine of their own; Ableton's own Sampler does that synthesis after `convert-als`), so both, and `preview` below, are VGM/VGZ-only for now.
+
+## `ablemod preview` — live waveform preview / video export
+
+A subcommand of `ablemod` itself (`src/preview.rs`) behind the `preview` Cargo feature — a
+default `cargo build` never needs SDL2/SDL2_ttf (system libraries, unlike every other native
+dependency this project vendors/compiles from source) just to build the main CLI:
+
+```
+cargo build --release --features preview     # the `preview` subcommand only exists in this build
+ablemod preview <file.vgz> [--no-loop]       # play the file's own chip-emulated stems live
+ablemod preview <file.vgz> --record out.mp4  # render one playthrough to a video file instead
+```
+
+Renders the given VGM/VGZ file's stems in memory (the same render `extract-separated-tracks-wav`
+writes to disk — `export::vgm_render::render_stems` — no intermediate WAV files) and plays them
+together, in sync, in one fixed-size (1920x1080) window laid out as a grid of small cells: one
+live oscilloscope cell per non-silent chip channel (up to 16, one of which is always the info
+panel — see below — so a channel count past 15 still plays in full, just without its own cell).
+The grid — and so each cell's own size — adapts to the channel count: few channels get a few
+big cells, many channels get many small ones, rather than the window itself growing. Each
+waveform cell is a live scope, not a DAW-style clip overview: it shows a short trailing sample
+of that channel's own audio as it's actually being played, redrawn fresh every video frame —
+the real wave shape/cycles, not a compressed whole-file silhouette. One cell, reserved near the
+middle of the grid, is always the **info panel** instead of a waveform: the same metadata
+`ablemod list` prints (title/game/system/author/duration/loop/chips — `formats::vgm::
+summary_lines`, shared by both), rendered once at startup (it doesn't change while playing) via
+a bundled font (`assets/DejaVuSansMono.ttf`, Bitstream Vera-derived license, see `assets/
+DejaVuSansMono-LICENSE.txt`) through SDL2_ttf.
+
+Playback and rendering both go through SDL2 (not a separate audio crate) specifically so they
+share one clock — every cell's trace position is read directly from the sample count SDL2's own
+audio callback has actually written, not a wall-clock timer that could drift out of sync with
+what's really coming out of the speakers. Playback loops back to the start by default
+(`--no-loop` to play once and stop), matching how a game's own music loops indefinitely too.
+Space = pause/resume, Esc/Q or closing the window = quit. Requires SDL2 + SDL2_ttf installed
+(`brew install sdl2 sdl2_ttf` on macOS, `apt install libsdl2-dev libsdl2-ttf-dev` on
+Debian/Ubuntu) — located via `pkg-config` at build time.
+
+`--record <file.mp4>` renders exactly one playthrough to a video file instead of opening a
+live, audio-driven window: frame timing is derived deterministically from the sample count
+(frame *f* → sample *f/fps·rate*), not real elapsed time or a live audio device, so it runs as
+fast as the CPU can encode (measured ~3.5x realtime on a real 9-channel/53s file) rather than
+waiting through the actual song length. Each rendered frame's pixels are piped as raw video
+into an `ffmpeg` subprocess — not a Rust encoding crate, since there's no mature pure-Rust
+H.264 encoder and shelling out to `ffmpeg` is the standard, pragmatic approach — which also
+muxes in a freshly-rendered mixdown WAV of the same channels (rendered once in software, not
+captured from a live audio device). Requires `ffmpeg` installed and on `PATH` (`brew install
+ffmpeg` / `apt install ffmpeg`) — a separate runtime dependency from SDL2, only needed for
+this one flag, checked at the point `--record` is actually used rather than at startup.
+
+## `ablemod-gui` — point-and-click front-end
+
+A separate executable (`src/bin/gui.rs`) behind the `gui` Cargo feature, built on
+[egui](https://github.com/emilk/egui)/[eframe](https://github.com/emilk/egui/tree/master/crates/eframe)
+(native file dialogs via [`rfd`](https://github.com/PolyMeilex/rfd)):
+
+```
+cargo build --release --features preview,gui   # builds target/release/ablemod-gui too — both
+                                                # features together, see below for why
+ablemod-gui
+```
+
+A dark-themed window matching `ablemod preview`'s own palette: drop a tracker module or
+VGM/VGZ file (or use File > Open), and it settles into a file card with a colored type badge
+and a grouped list of actions underneath — Convert to Ableton Live Set, Extract Samples/MIDI
+for tracker modules; Convert, Extract Mixed/Separated Tracks, Preview, Export Video for
+VGM/VGZ. Each action opens a native Open/Save dialog for its own input/output path, then runs
+on a background thread with the action list dimmed and a spinner showing, reporting
+success/failure in a console-style status panel below (color-coded: blue while running, green
+on success, red on failure).
+
+This binary **never calls into `ablemod`'s own `export::`/`formats::` code directly** — every
+action shells out to the `ablemod` CLI binary sitting next to it (falling back to `ablemod` on
+`PATH`), on a background thread so the UI stays responsive. Two reasons: it keeps every actual
+conversion/rendering behavior in exactly one place (this is a thin launcher, not a second
+implementation that could drift out of sync with the CLI), and it sidesteps a real macOS
+constraint — SDL2 (`ablemod preview`'s own toolkit) and eframe's winit backend each expect to
+own the process' main thread run loop, which two GUI toolkits sharing one process can't both
+do. Running `preview`/`preview --record` as their own separate OS process, each with its own
+main thread, avoids that entirely. A practical consequence: **build with both `preview,gui`
+together** — `ablemod-gui`'s own Preview/Export Video buttons work by invoking the `ablemod`
+binary's `preview` subcommand, so if that binary wasn't itself built with `--features preview`,
+those two buttons report a clear error (the same one `ablemod preview` itself gives) rather
+than silently doing nothing.
 
 ## Status by format
 

@@ -453,3 +453,55 @@ pub fn parse(bytes: &[u8]) -> Result<VgmFile, String> {
         raw_data: data,
     })
 }
+
+/// The same metadata `cli.rs`'s own `vgm_list_cmd` prints for `ablemod list` — factored out
+/// here (rather than left inline in cli.rs) so `preview`'s own info-panel cell can render the
+/// identical text without depending on cli.rs or duplicating this list. One `String` per
+/// printed line, no trailing newline; an empty string marks a blank separator line.
+pub fn summary_lines(vgm: &VgmFile) -> Vec<String> {
+    let mut lines = Vec::new();
+    lines.push(format!("Title:      {}", vgm.title.as_deref().unwrap_or("(unknown)")));
+    lines.push(format!("Game:       {}", vgm.game.as_deref().unwrap_or("(unknown)")));
+    lines.push(format!("System:     {}", vgm.system.as_deref().unwrap_or("(unknown)")));
+    lines.push(format!("Author:     {}", vgm.author.as_deref().unwrap_or("(unknown)")));
+    lines.push(format!("Format:     VGM v{}", version_string(vgm.version)));
+    lines.push(format!("Duration:   {:.1}s ({} samples @ 44100Hz)", vgm.total_samples as f64 / 44100.0, vgm.total_samples));
+    match vgm.loop_start_sample {
+        Some(loop_start) => {
+            lines.push(format!("Loop:       from {:.1}s, {:.1}s long", loop_start as f64 / 44100.0, vgm.loop_samples as f64 / 44100.0))
+        }
+        None => lines.push("Loop:       (none)".to_string()),
+    }
+
+    lines.push(String::new());
+    lines.push("Chips:".to_string());
+    if vgm.ym2413_clock > 0 {
+        lines.push(format!("  YM2413 (OPLL FM) @ {} Hz", vgm.ym2413_clock));
+    }
+    if vgm.ay8910_clock > 0 {
+        let variant = if vgm.ay8910_is_ym { " [YM2149-compatible]" } else { "" };
+        lines.push(format!("  AY8910 (PSG){variant} @ {} Hz", vgm.ay8910_clock));
+    }
+    if vgm.scc_clock > 0 {
+        lines.push(format!("  K051649/SCC (Konami) @ {} Hz", vgm.scc_clock));
+    }
+    for (clock, name) in [
+        (vgm.ym3526_clock, "YM3526 (OPL FM)"),
+        (vgm.ym3812_clock, "YM3812 (OPL2 FM)"),
+        (vgm.ym2612_clock, "YM2612 (OPN2 FM, Sega Genesis/Mega Drive)"),
+        (vgm.ym2151_clock, "YM2151 (OPM FM, arcade/X68000)"),
+        (vgm.ym2203_clock, "YM2203 (OPN FM)"),
+        (vgm.ym2608_clock, "YM2608 (OPNA FM)"),
+        (vgm.ym2610_clock, "YM2610 (OPNB FM, Neo Geo)"),
+        (vgm.segapcm_clock, "Sega PCM"),
+        (vgm.rf5c68_clock, "RF5C68 (PCM)"),
+        (vgm.rf5c164_clock, "RF5C164 (PCM)"),
+        (vgm.gb_dmg_clock, "GameBoy DMG"),
+        (vgm.nes_apu_clock, "NES APU"),
+    ] {
+        if clock > 0 {
+            lines.push(format!("  {name} @ {clock} Hz"));
+        }
+    }
+    lines
+}

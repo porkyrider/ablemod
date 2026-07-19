@@ -99,6 +99,21 @@ pub enum Command {
         #[arg(short = 'v', long = "verbose")]
         verbose: bool,
     },
+
+    /// Play a VGM/VGZ file's chip-emulated stems live, one scrolling-waveform cell per channel
+    /// in a single window (see src/preview.rs's own module comment) — VGM/VGZ only, same
+    /// reason 'extract-mixed-tracks' is. Requires ablemod to have been built with `--features
+    /// preview` (needs SDL2 + SDL2_ttf installed; not part of a default build).
+    Preview {
+        module_path: PathBuf,
+        /// Instead of opening a live, audio-driven window, render exactly one playthrough to
+        /// this video file (e.g. out.mp4) via ffmpeg (must be installed and on PATH).
+        #[arg(long = "record")]
+        record: Option<PathBuf>,
+        /// Play through once and stop instead of looping back to the start.
+        #[arg(long = "no-loop")]
+        no_loop: bool,
+    },
 }
 
 fn print_module_summary(module: &Module) {
@@ -216,6 +231,28 @@ pub fn run(cli: Cli) -> Result<(), String> {
                 vgm_convert_cmd(&module_path, template_path.as_deref(), &output_path, verbose)
             } else {
                 convert_cmd(&module_path, template_path.as_deref(), &output_path, amiga_panning, verbose)
+            }
+        }
+        Command::Preview { module_path, record, no_loop } => {
+            if !is_vgm_path(&module_path) {
+                return Err(
+                    "preview doesn't apply to tracker modules yet: no audio-rendering engine exists for \
+                     .mod/.xm/.s3m today (only VGM/VGZ's chip emulation renders real audio)."
+                        .to_string(),
+                );
+            }
+            #[cfg(feature = "preview")]
+            {
+                crate::preview::run(&module_path, record.as_deref(), no_loop)
+            }
+            #[cfg(not(feature = "preview"))]
+            {
+                let _ = (record, no_loop);
+                Err(
+                    "ablemod was built without the 'preview' feature — rebuild with `cargo build --features \
+                     preview` (requires SDL2 and SDL2_ttf installed) to use this command."
+                        .to_string(),
+                )
             }
         }
     }
