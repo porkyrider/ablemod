@@ -89,6 +89,9 @@ jobs:
           # explicitly assigned).
           $env:VCPKG_ROOT = $env:VCPKG_INSTALLATION_ROOT
           $env:VCPKGRS_TRIPLET = "x64-windows"
+          # x64-windows is vcpkg's dynamic (DLL) triplet — the vcpkg crate requires this env
+          # var set explicitly to confirm that's intentional, rather than assuming a static lib.
+          $env:VCPKGRS_DYNAMIC = "1"
           cargo build --release --features preview,gui --target x86_64-pc-windows-msvc
 
       - name: Package
