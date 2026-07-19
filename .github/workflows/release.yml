@@ -80,9 +80,16 @@ jobs:
         shell: pwsh
 
       - name: Build
-        run: cargo build --release --features preview,gui --target x86_64-pc-windows-msvc
-        env:
-          VCPKGRS_TRIPLET: x64-windows
+        shell: pwsh
+        run: |
+          # The `vcpkg` Rust crate (used by sdl2-sys) looks for VCPKG_ROOT specifically — the
+          # windows-latest runner's own preinstalled vcpkg only sets VCPKG_INSTALLATION_ROOT.
+          # Alias it here (in-shell, not via a workflow-level `env:` expression — that context
+          # can't see OS-level env vars the runner image itself sets, only ones this workflow
+          # explicitly assigned).
+          $env:VCPKG_ROOT = $env:VCPKG_INSTALLATION_ROOT
+          $env:VCPKGRS_TRIPLET = "x64-windows"
+          cargo build --release --features preview,gui --target x86_64-pc-windows-msvc
 
       - name: Package
         shell: pwsh
