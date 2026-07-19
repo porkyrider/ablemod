@@ -34,19 +34,30 @@ clap = { version = "4", features = ["derive"] }
 flate2 = "1"
 hound = "3"
 xmltree = "0.11"
+# `ablemod-gui`'s own dependencies — optional/feature-gated (a default `cargo build` of the
+# CLI shouldn't need a GUI toolkit at all).
+eframe = { version = "0.29", optional = true, default-features = false, features = ["default_fonts", "glow"] }
+rfd = { version = "0.15", optional = true }
+
 # `ablemod preview`'s own dependency (see src/preview.rs's own module comment) — optional and
 # feature-gated (see [features] below) so a default `cargo build` of the main CLI never needs
 # SDL2/SDL2_ttf (system libraries, not vendored/compiled from source like every other native
-# dependency this project links) just to build. "use-pkgconfig": locates the system SDL2
-# install (Homebrew's isn't on the default linker search path on Apple Silicon) via pkg-config
-# instead of hardcoding a path here — portable across macOS/Linux, whatever the actual install
-# prefix is. "ttf" pulls in SDL2_ttf, for the info panel's own text (see assets/ for the
-# bundled font this renders with).
+# dependency this project links) just to build. SDL2_ttf isn't part of SDL2's own source tree,
+# so it can't be vendored/statically bundled the way the rest of this project's native
+# dependencies are — it always has to be located as a system library, hence the OS-specific
+# discovery mechanism below rather than one shared dependency line.
+#
+# Unix (macOS/Linux): "use-pkgconfig" locates the system SDL2/SDL2_ttf install (Homebrew's
+# isn't on the default linker search path on Apple Silicon) via pkg-config instead of
+# hardcoding a path here — portable across whatever the actual install prefix is.
+[target.'cfg(not(windows))'.dependencies]
 sdl2 = { version = "0.37", optional = true, features = ["use-pkgconfig", "ttf"] }
-# `ablemod-gui`'s own dependencies — optional/feature-gated for the same reason sdl2 is (a
-# default `cargo build` of the CLI shouldn't need a GUI toolkit at all).
-eframe = { version = "0.29", optional = true, default-features = false, features = ["default_fonts", "glow"] }
-rfd = { version = "0.15", optional = true }
+
+# Windows: pkg-config isn't a native concept there — "use-vcpkg" instead, matching the vcpkg
+# install GitHub's own windows-latest Actions runner already ships preconfigured with (see
+# .github/workflows/release.yml), so CI needs no extra SDL2 setup step beyond `vcpkg install`.
+[target.'cfg(windows)'.dependencies]
+sdl2 = { version = "0.37", optional = true, features = ["use-vcpkg", "ttf"] }
 
 [features]
 preview = ["dep:sdl2"]

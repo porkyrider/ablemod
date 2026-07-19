@@ -1,0 +1,146 @@
+name: Release builds
+
+# Manual only — this repo doesn't auto-publish a release on every push. Trigger from the
+# Actions tab (or `gh workflow run release.yml -f tag=vX.Y.Z`); the tag defaults to
+# `v<Cargo.toml version>` if left blank, so a plain manual run with no input is normally enough.
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag (defaults to v<Cargo.toml version>)"
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      # SDL2/SDL2_ttf (ablemod preview) located via pkg-config — see Cargo.toml's own comment
+      # on why this can't be vendored/statically bundled the way every other native dependency
+      # this project links is. ablemod-gui itself needs none of this (see its own module
+      # comment: it shells out to the `ablemod` binary for preview, never links SDL2 directly).
+      - name: Install SDL2
+        run: brew install sdl2 sdl2_ttf
+
+      - name: Build
+        run: cargo build --release --features preview,gui
+
+      - name: Package
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          cp target/release/ablemod dist/
+          cp target/release/ablemod-gui dist/
+          cp README.md LICENSE dist/ 2>/dev/null || cp README.md dist/
+          cat > dist/RUNTIME-REQUIREMENTS.txt <<'EOF'
+          ablemod / ablemod-gui — macOS build
+
+          `ablemod-gui` and every ablemod command except `preview` work standalone.
+
+          `ablemod preview` (live waveform preview / --record video export) needs SDL2 and
+          SDL2_ttf installed via Homebrew:
+              brew install sdl2 sdl2_ttf
+
+          `ablemod preview --record <file.mp4>` additionally needs ffmpeg on PATH:
+              brew install ffmpeg
+
+          macOS Gatekeeper will refuse to run these binaries the first time (unsigned,
+          not notarized) — right-click each one in Finder, choose Open, and confirm once,
+          or run: xattr -d com.apple.quarantine ablemod ablemod-gui
+          EOF
+          cd dist
+          zip -r ../ablemod-macos.zip .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ablemod-macos
+          path: ablemod-macos.zip
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      # windows-latest ships vcpkg preinstalled (VCPKG_INSTALLATION_ROOT) — matches Cargo.toml's
+      # windows-specific sdl2 dependency, which uses "use-vcpkg" instead of pkg-config there.
+      - name: Install SDL2 via vcpkg
+        run: |
+          & "$env:VCPKG_INSTALLATION_ROOT\vcpkg.exe" install sdl2:x64-windows sdl2-ttf:x64-windows
+        shell: pwsh
+
+      - name: Build
+        run: cargo build --release --features preview,gui --target x86_64-pc-windows-msvc
+        env:
+          VCPKGRS_TRIPLET: x64-windows
+
+      - name: Package
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          Copy-Item target\x86_64-pc-windows-msvc\release\ablemod.exe dist\
+          Copy-Item target\x86_64-pc-windows-msvc\release\ablemod-gui.exe dist\
+          Copy-Item README.md dist\
+          if (Test-Path LICENSE) { Copy-Item LICENSE dist\ }
+          # ablemod.exe dynamically links SDL2/SDL2_ttf (+ their own dependencies, e.g.
+          # freetype/zlib) via vcpkg's dynamic (x64-windows) triplet — bundle every DLL vcpkg
+          # produced so the .exe runs without a separate SDL2 install. ablemod-gui.exe needs
+          # none of this (see its own module comment).
+          Copy-Item "$env:VCPKG_INSTALLATION_ROOT\installed\x64-windows\bin\*.dll" dist\
+          @"
+          ablemod / ablemod-gui — Windows build
+
+          ablemod.exe, ablemod-gui.exe, and the bundled *.dll files must stay together in the
+          same folder — the DLLs are SDL2/SDL2_ttf and their own dependencies, needed only by
+          the ``preview`` command (every other command, and ablemod-gui itself, don't need them).
+
+          ``ablemod preview --record <file.mp4>`` additionally needs ffmpeg on PATH:
+          https://www.gyan.dev/ffmpeg/builds/ (or ``winget install ffmpeg``)
+          "@ | Out-File -Encoding utf8 dist\RUNTIME-REQUIREMENTS.txt
+          Compress-Archive -Path dist\* -DestinationPath ablemod-windows.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ablemod-windows
+          path: ablemod-windows.zip
+
+  release:
+    needs: [build-macos, build-windows]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Determine tag
+        id: tag
+        run: |
+          if [ -n "${{ inputs.tag }}" ]; then
+            echo "tag=${{ inputs.tag }}" >> "$GITHUB_OUTPUT"
+          else
+            version=$(grep -m1 '^version' Cargo.toml | sed -E 's/version = "(.*)"/\1/')
+            echo "tag=v${version}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          name: ${{ steps.tag.outputs.tag }}
+          files: |
+            artifacts/ablemod-macos/ablemod-macos.zip
+            artifacts/ablemod-windows/ablemod-windows.zip
+          generate_release_notes: true

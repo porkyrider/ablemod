@@ -2255,6 +2255,7 @@ dependencies = [
  "cfg-if",
  "libc",
  "pkg-config",
+ "vcpkg",
  "version-compare",
 ]
 
@@ -2671,6 +2672,12 @@ dependencies = [
  "serde_core",
  "wasm-bindgen",
 ]
+
+[[package]]
+name = "vcpkg"
+version = "0.2.15"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "accd4ea62f7bb7a82fe23066fb0957d48ef677f6eeb8215f372f52e48bb32426"
 
 [[package]]
 name = "version-compare"
