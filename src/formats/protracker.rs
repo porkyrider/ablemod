@@ -307,5 +307,6 @@ pub fn parse(data: &[u8]) -> Module {
         restart_position,
         initial_tempo_bpm: 125,
         initial_speed_ticks: 6,
+        linear_frequency_table: false, // MOD has no such concept; always the classic Amiga period formula
     }
 }

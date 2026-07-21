@@ -87,6 +87,14 @@ pub struct Module {
     pub restart_position: u32,
     pub initial_tempo_bpm: u32,
     pub initial_speed_ticks: u32,
+    // Selects which period<->pitch math export::notes uses for Portamento/Tone Portamento/
+    // Vibrato/Arpeggio (see notes.rs's own doc comment on this): `false` (ProTracker has no
+    // such concept — always the classic non-linear Amiga period formula) vs `true` (XM's own
+    // "linear frequency table" flag — a fixed number of period units per semitone, used by
+    // nearly all real-world XM content). XM files declaring the non-linear "Amiga frequency
+    // table" instead still get this set to `true` (a documented, deliberate scope cut — see
+    // README.md — not a bug: distinguishing that third case isn't implemented).
+    pub linear_frequency_table: bool,
 }
 
 impl Module {

@@ -12,7 +12,7 @@ fn module(patterns: Vec<Pattern>, num_channels: usize, speed: u32, bpm: u32, sam
             index: 1, name: "s".to_string(), pcm16: vec![0, 0], sample_rate_hz: 8363,
             loop_start: 0, loop_length: 1, volume: 64, finetune: 0, base_note: 60, pan: 0.0, volume_envelope: None, panning_envelope: None, fadeout: 0,
         }]),
-        patterns, order: (0..n as u32).collect(), restart_position: 0, initial_tempo_bpm: bpm, initial_speed_ticks: speed,
+        patterns, order: (0..n as u32).collect(), restart_position: 0, initial_tempo_bpm: bpm, initial_speed_ticks: speed, linear_frequency_table: false,
     }
 }
 

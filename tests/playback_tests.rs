@@ -4,7 +4,7 @@ use ablemod::formats::playback::iter_song_rows;
 fn module(patterns: Vec<Pattern>, order: Vec<u32>) -> Module {
     Module {
         title: "t".to_string(), source_format: "protracker".to_string(), num_channels: 1,
-        samples: vec![], patterns, order, restart_position: 0, initial_tempo_bpm: 125, initial_speed_ticks: 6,
+        samples: vec![], patterns, order, restart_position: 0, initial_tempo_bpm: 125, initial_speed_ticks: 6, linear_frequency_table: false,
     }
 }
 

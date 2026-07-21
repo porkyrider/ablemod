@@ -155,6 +155,7 @@ struct XmHeader {
     num_channels: usize,
     num_patterns: usize,
     num_instruments: usize,
+    linear_frequency_table: bool,
     default_speed_ticks: u32, // XM's header confusingly calls this field "tempo"
     default_bpm: u32,         // ...and calls this one "BPM" — this one is the real tempo
     order: Vec<u32>,
@@ -170,8 +171,13 @@ fn parse_header(data: &[u8]) -> (XmHeader, usize) {
     let num_patterns = read_u16(data, 70) as usize;
     let num_instruments = read_u16(data, 72) as usize;
     // Byte order in the file is [flags(u16), "tempo" a.k.a. ticks/row(u16), "BPM" a.k.a. the
-    // real tempo(u16)] — flags (linear vs. Amiga frequency table) isn't consumed here; the
-    // linear frequency table is assumed throughout (see build_sample's pitch formula).
+    // real tempo(u16)]. flags bit 0: linear (1) vs. Amiga (0) frequency table — propagated to
+    // Module.linear_frequency_table, which export::notes uses to pick the right period<->pitch
+    // math for Portamento/Tone Portamento/Vibrato/Arpeggio (see its own doc comment). The base
+    // sample-pitch formula in build_sample, below, still always assumes linear regardless of
+    // this flag (a separate, already-documented scope cut, see README.md).
+    let flags = read_u16(data, 74);
+    let linear_frequency_table = flags & 0x01 != 0;
     let default_speed_ticks = read_u16(data, 76) as u32;
     let default_bpm = read_u16(data, 78) as u32;
 
@@ -184,6 +190,7 @@ fn parse_header(data: &[u8]) -> (XmHeader, usize) {
         num_channels,
         num_patterns,
         num_instruments,
+        linear_frequency_table,
         default_speed_ticks,
         default_bpm,
         order,
@@ -627,5 +634,6 @@ pub fn parse(data: &[u8]) -> Module {
         restart_position: header.restart_position,
         initial_tempo_bpm: header.default_bpm,
         initial_speed_ticks: header.default_speed_ticks,
+        linear_frequency_table: header.linear_frequency_table,
     }
 }

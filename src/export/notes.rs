@@ -60,6 +60,45 @@ const E_NOTE_DELAY: u32 = 0xD;
 const REFERENCE_PERIOD: f64 = 428.0;
 const REFERENCE_NOTE: f64 = 60.0;
 
+// XM's "linear frequency table" (Module.linear_frequency_table — see its own doc comment)
+// period model: unlike the classic Amiga period above (exponential — period_to_fractional_note
+// takes a log2), a linear period is *linear* in semitones throughout, at a fixed rate of
+// LINEAR_PERIOD_UNITS_PER_SEMITONE units/semitone (64, matching FT2's own internal
+// representation and confirmed empirically — see below). All the pitch-affecting effects below
+// (Portamento Up/Down, Tone Portamento, Vibrato, Arpeggio, Fine Portamento) share one
+// `channel_period` value per channel regardless of which domain is active, so every place that
+// reads or writes it has to consistently pick the right pair of conversion functions/scale —
+// picking the wrong one for even one of them would desync `channel_period`'s own meaning
+// mid-note, corrupting every *other* effect that touches it afterward, not just the one that
+// got it wrong.
+//
+// Confidence per effect (this matters for anyone revisiting this later): Portamento Up/Down's
+// own per-tick scale (4x the raw effect parameter, i.e. the raw parameter directly in
+// LINEAR_PERIOD_UNITS_PER_SEMITONE/4 units) was empirically verified this session — rendering a
+// synthetic XM file through libopenmpt (openmpt123 --render) and measuring the actual resulting
+// pitch curve via FFT showed a rock-steady 1.75 semitones/tick for a param=0x1C (28) slide,
+// exactly matching 4*28/64: not a guess. The Amiga-mode branch (`param` with no multiplier) was
+// itself verified the same way in an earlier session (see that branch's own comment) — this
+// linear-mode fix was prompted by a real user report that Portamento Up on an XM file reached
+// an absurd pitch (tens of semitones) over just a few rows, which is exactly what happens if
+// Amiga-mode's *logarithmic* period math is used on a *linear*-period value: the same fixed
+// per-tick period delta corresponds to an ever-larger semitone jump as the (exponential) period
+// shrinks, so what should be a steady climb instead runs away and eventually saturates against
+// the period clamp. Tone Portamento/Vibrato/Arpeggio/Fine Portamento below only had their
+// *conversion function* swapped to the linear one (required, per the shared-state paragraph
+// above) — their own per-tick *scale* constants (already baked in from Amiga-mode calibration,
+// e.g. Tone Portamento's existing `* 4.0`) were left as-is, not independently re-verified
+// against real linear-mode XM playback. If one of those reads as off on a real XM file, that's
+// the first place to check.
+const LINEAR_PERIOD_UNITS_PER_SEMITONE: f64 = 64.0;
+// Sanity clamps for a runaway/pathological Portamento or Fine Portamento (not a musically
+// meaningful range on their own) — each domain's own valid period range is shaped completely
+// differently (Amiga periods are always positive; linear periods can go negative for notes
+// above the MIDI 60 reference, since linear_period = (60-note)*64), so the two need separate
+// bounds, not one shared pair reused across both.
+const AMIGA_PERIOD_BOUNDS: (f64, f64) = (1.0, 32000.0);
+const LINEAR_PERIOD_BOUNDS: (f64, f64) = (-8000.0, 8000.0); // +-125 semitones from the reference, generous headroom
+
 // ft2-clone's arpeggioTab[32] (src/ft2_tables.c): the intended pattern is just "i % 3", but
 // FT2's actual binary only has 16 correct bytes — the rest (indices 16-31) are unrelated
 // bytes that happened to follow the table in memory, and FT2 (bug and all) reads them
@@ -76,6 +115,14 @@ fn period_to_fractional_note(period: f64) -> f64 {
 
 fn note_to_period(note: i32) -> f64 {
     REFERENCE_PERIOD * 2f64.powf((REFERENCE_NOTE - note as f64) / 12.0)
+}
+
+fn linear_period_to_fractional_note(period: f64) -> f64 {
+    REFERENCE_NOTE - period / LINEAR_PERIOD_UNITS_PER_SEMITONE
+}
+
+fn note_to_linear_period(note: i32) -> f64 {
+    (REFERENCE_NOTE - note as f64) * LINEAR_PERIOD_UNITS_PER_SEMITONE
 }
 
 fn daw_bpm(tracker_bpm: u32, speed: u32) -> f64 {
@@ -264,6 +311,7 @@ fn trigger_note(
     sample: &Sample,
     bpm: f64,
     beats_per_tick: f64,
+    linear_frequency_table: bool,
     notes_by_sample: &mut BTreeMap<u32, Vec<NoteEvent>>,
     channel_held: &mut [Option<(u32, usize)>],
     channel_period: &mut [Option<f64>],
@@ -281,7 +329,8 @@ fn trigger_note(
     let trigger_volume = cell.volume.map(|v| v as i32).unwrap_or(sample.volume as i32);
     let vel = velocity(cell.volume, sample.volume);
     let mut event = NoteEvent::new(at_beat, midi_note, vel, trigger_volume, ch);
-    channel_period[ch] = Some(note_to_period(midi_note));
+    channel_period[ch] =
+        Some(if linear_frequency_table { note_to_linear_period(midi_note) } else { note_to_period(midi_note) });
     channel_trigger_volume[ch] = Some(trigger_volume);
     channel_current_volume[ch] = Some(trigger_volume);
     channel_vibrato_pos[ch] = 0.0; // ft2-clone: triggerInstrument() resets vibrato phase
@@ -383,6 +432,7 @@ pub fn compute_song_events(module: &Module) -> SongEvents {
     let mut notes_by_sample: BTreeMap<u32, Vec<NoteEvent>> =
         non_empty_samples.iter().map(|s| (s.index, Vec::new())).collect();
 
+    let linear_frequency_table = module.linear_frequency_table;
     let mut speed = module.initial_speed_ticks;
     let mut tracker_bpm = module.initial_tempo_bpm;
     let mut bpm = daw_bpm(tracker_bpm, speed);
@@ -545,7 +595,8 @@ pub fn compute_song_events(module: &Module) -> SongEvents {
                 // the currently held note to glide toward (ft2-clone's preparePortamento()
                 // skips CS_TRIGGER_VOICE entirely for this effect), not a new note-on.
                 if let Some(midi_note) = cell.midi_note {
-                    channel_portamento_target[ch] = Some(note_to_period(midi_note));
+                    channel_portamento_target[ch] =
+                        Some(if linear_frequency_table { note_to_linear_period(midi_note) } else { note_to_period(midi_note) });
                 }
                 if let Some(param) = cell.effect_param {
                     if param != 0 {
@@ -569,8 +620,8 @@ pub fn compute_song_events(module: &Module) -> SongEvents {
                                         let at_beat = beat + tick as f64 * beats_per_tick;
                                         trigger_note(
                                             at_beat, midi_note, ch, cell, active_sample, sample, bpm, beats_per_tick,
-                                            &mut notes_by_sample, &mut channel_held, &mut channel_period,
-                                            &mut channel_trigger_volume, &mut channel_current_volume,
+                                            linear_frequency_table, &mut notes_by_sample, &mut channel_held,
+                                            &mut channel_period, &mut channel_trigger_volume, &mut channel_current_volume,
                                             &mut channel_vibrato_pos, &mut channel_tremolo_pos,
                                             &mut channel_sample_offset,
                                         );
@@ -586,10 +637,10 @@ pub fn compute_song_events(module: &Module) -> SongEvents {
                     if let Some(sample) = samples_by_index.get(&active_sample) {
                         if notes_by_sample.contains_key(&active_sample) {
                             trigger_note(
-                                beat, midi_note, ch, cell, active_sample, sample, bpm, beats_per_tick, &mut notes_by_sample,
-                                &mut channel_held, &mut channel_period, &mut channel_trigger_volume,
-                                &mut channel_current_volume, &mut channel_vibrato_pos, &mut channel_tremolo_pos,
-                                &mut channel_sample_offset,
+                                beat, midi_note, ch, cell, active_sample, sample, bpm, beats_per_tick,
+                                linear_frequency_table, &mut notes_by_sample, &mut channel_held, &mut channel_period,
+                                &mut channel_trigger_volume, &mut channel_current_volume, &mut channel_vibrato_pos,
+                                &mut channel_tremolo_pos, &mut channel_sample_offset,
                             );
                             // a fresh note-on has no continuity with whatever was happening on
                             // this channel's *previous* note — without this, the new note's
@@ -746,22 +797,25 @@ pub fn compute_song_events(module: &Module) -> SongEvents {
                 // the real hardware applies the delta *every tick*, not once per row —
                 // emitting one bend point per tick (not one lump sum for the whole row) is
                 // what makes this read as a smooth glide instead of an instant jump that
-                // sounds like the note got retriggered. The period moves by the raw effect
-                // parameter directly (no extra multiplier) — an earlier ×4 scale, read
-                // literally off ft2-clone's pitchSlideUp/pitchSlideDown source, sounded
+                // sounds like the note got retriggered. Amiga mode: the period moves by the
+                // raw effect parameter directly (no extra multiplier) — an earlier ×4 scale,
+                // read literally off ft2-clone's pitchSlideUp/pitchSlideDown source, sounded
                 // noticeably too strong in Ableton; isolating a single note (period 428) and
                 // measuring a real "1xy, param=2" slide's actual pitch rise via libopenmpt
                 // confirmed the raw-parameter scale matches real playback (~0.35 semitones
-                // over one row at speed 6), not the ×4-scaled ~1.7 semitones. The ft2-clone
-                // ×4 figure most likely applies to FT2's own internal fine-period
-                // representation, not the plain Amiga/MOD period slides this exporter works in.
-                let param = param as f64;
+                // over one row at speed 6), not the ×4-scaled ~1.7 semitones. Linear mode
+                // (XM's own frequency table, see LINEAR_PERIOD_UNITS_PER_SEMITONE's own doc
+                // comment) genuinely does use that same ×4 the Amiga path omits — confirmed
+                // separately, also via a real rendered-and-measured pitch curve, not a guess.
+                let param = if linear_frequency_table { param as f64 * 4.0 } else { param as f64 };
+                let period_bounds = if linear_frequency_table { LINEAR_PERIOD_BOUNDS } else { AMIGA_PERIOD_BOUNDS };
                 let event = &mut notes_by_sample.get_mut(&held_sample).unwrap()[held_idx];
                 for tick in 1..speed {
-                    let new_period = (channel_period[ch].unwrap() + sign * param).clamp(1.0, 32000.0);
+                    let new_period = (channel_period[ch].unwrap() + sign * param).clamp(period_bounds.0, period_bounds.1);
                     channel_period[ch] = Some(new_period);
                     let tick_beat = beat + tick as f64 * beats_per_tick;
-                    let fractional_note = period_to_fractional_note(new_period);
+                    let fractional_note =
+                        if linear_frequency_table { linear_period_to_fractional_note(new_period) } else { period_to_fractional_note(new_period) };
                     let glide = if tick == 1 { was_bending } else { true };
                     event.bends.push(PitchBend { at_beat: tick_beat, semitones: fractional_note - event.pitch as f64, glide });
                 }
@@ -792,7 +846,8 @@ pub fn compute_song_events(module: &Module) -> SongEvents {
                         channel_period[ch] = Some(current);
                     }
                     let tick_beat = beat + tick as f64 * beats_per_tick;
-                    let fractional_note = period_to_fractional_note(current);
+                    let fractional_note =
+                        if linear_frequency_table { linear_period_to_fractional_note(current) } else { period_to_fractional_note(current) };
                     let glide = if tick == 1 { was_portamento_active } else { true };
                     event.bends.push(PitchBend { at_beat: tick_beat, semitones: fractional_note - event.pitch as f64, glide });
                 }
@@ -849,9 +904,17 @@ pub fn compute_song_events(module: &Module) -> SongEvents {
                         // gap, not just a one-off reading — an extra /4 (i.e. /128 overall)
                         // reproduces the measured swing.
                         let phase = (channel_vibrato_pos[ch].rem_euclid(256.0)) / 256.0;
+                        // NOTE: this offset's own scale was calibrated against Amiga-period
+                        // math specifically (see above) and hasn't been independently
+                        // re-verified for linear mode (see LINEAR_PERIOD_UNITS_PER_SEMITONE's
+                        // own doc comment) — only the conversion function below is swapped,
+                        // which is required for channel_period to stay self-consistent, not a
+                        // claim that the resulting depth is correct on a linear-mode XM file.
                         let offset = (2.0 * std::f64::consts::PI * phase).sin() * 255.0 * vib_depth / 128.0;
                         let tick_beat = beat + tick as f64 * beats_per_tick;
-                        let fractional_note = period_to_fractional_note(channel_period[ch].unwrap() + offset);
+                        let new_period = channel_period[ch].unwrap() + offset;
+                        let fractional_note =
+                            if linear_frequency_table { linear_period_to_fractional_note(new_period) } else { period_to_fractional_note(new_period) };
                         let glide = if tick == 1 { was_vibrating } else { true };
                         event.bends.push(PitchBend { at_beat: tick_beat, semitones: fractional_note - event.pitch as f64, glide });
                     }
@@ -928,7 +991,11 @@ pub fn compute_song_events(module: &Module) -> SongEvents {
                 let param = cell.effect_param.unwrap();
                 let x = (param >> 4) & 0x0F;
                 let y = param & 0x0F;
-                let base_fractional_note = period_to_fractional_note(channel_period[ch].unwrap());
+                let base_fractional_note = if linear_frequency_table {
+                    linear_period_to_fractional_note(channel_period[ch].unwrap())
+                } else {
+                    period_to_fractional_note(channel_period[ch].unwrap())
+                };
                 let event = &mut notes_by_sample.get_mut(&held_sample).unwrap()[held_idx];
                 for tick in 1..speed {
                     let ft2_tick = speed - tick; // ft2-clone's tick counter runs *down* to 1, not up
@@ -964,10 +1031,18 @@ pub fn compute_song_events(module: &Module) -> SongEvents {
                             // above) there's no per-tick compounding here to worry about, and
                             // ft2-clone's literal ×4 scale (finePitchSlideUp/Down: `realPeriod
                             // -= param*4`) is used as-is.
+                            // NOTE: this ×4 was already applied unconditionally before linear-
+                            // mode support existed (see above) and, like Vibrato's own depth
+                            // scale, hasn't been independently re-verified for linear mode —
+                            // only the conversion function/clamp bounds below are swapped
+                            // (required for channel_period to stay self-consistent).
                             let sign: f64 = if is_up { -1.0 } else { 1.0 };
-                            let new_period = (channel_period[ch].unwrap() + sign * raw as f64 * 4.0).clamp(1.0, 32000.0);
+                            let period_bounds = if linear_frequency_table { LINEAR_PERIOD_BOUNDS } else { AMIGA_PERIOD_BOUNDS };
+                            let new_period =
+                                (channel_period[ch].unwrap() + sign * raw as f64 * 4.0).clamp(period_bounds.0, period_bounds.1);
                             channel_period[ch] = Some(new_period);
-                            let fractional_note = period_to_fractional_note(new_period);
+                            let fractional_note =
+                                if linear_frequency_table { linear_period_to_fractional_note(new_period) } else { period_to_fractional_note(new_period) };
                             let event = &mut notes_by_sample.get_mut(&held_sample).unwrap()[held_idx];
                             event.bends.push(PitchBend {
                                 at_beat: beat,
@@ -1016,8 +1091,8 @@ pub fn compute_song_events(module: &Module) -> SongEvents {
                                         let at_beat = beat + tick as f64 * beats_per_tick;
                                         trigger_note(
                                             at_beat, pitch, ch, cell, active_sample, sample, bpm, beats_per_tick,
-                                            &mut notes_by_sample, &mut channel_held, &mut channel_period,
-                                            &mut channel_trigger_volume, &mut channel_current_volume,
+                                            linear_frequency_table, &mut notes_by_sample, &mut channel_held,
+                                            &mut channel_period, &mut channel_trigger_volume, &mut channel_current_volume,
                                             &mut channel_vibrato_pos, &mut channel_tremolo_pos,
                                             &mut channel_sample_offset,
                                         );

@@ -268,7 +268,7 @@ fn test_export_als_volume_and_pan_envelopes() {
     let pattern = Pattern { rows: vec![vec![note_on], vec![slide_down]] };
     let module = Module {
         title: "t".to_string(), source_format: "protracker".to_string(), num_channels: 1, samples: vec![looped],
-        patterns: vec![pattern], order: vec![0], restart_position: 0, initial_tempo_bpm: 125, initial_speed_ticks: 6,
+        patterns: vec![pattern], order: vec![0], restart_position: 0, initial_tempo_bpm: 125, initial_speed_ticks: 6, linear_frequency_table: false,
     };
 
     export_als(&module, &output, &template, AmigaPanning::None).unwrap();
@@ -322,7 +322,7 @@ fn test_a_flat_volume_envelope_does_not_disturb_a_volume_slides_own_shape() {
     let fade_in = Cell { sample_index: Some(1), midi_note: Some(60), volume: Some(0), effect: Some(0xA), effect_param: Some(0x10), ..Default::default() };
     let module = Module {
         title: "t".to_string(), source_format: "fasttracker2".to_string(), num_channels: 1, samples: vec![enveloped],
-        patterns: vec![Pattern { rows: vec![vec![fade_in]] }], order: vec![0], restart_position: 0, initial_tempo_bpm: 125, initial_speed_ticks: 6,
+        patterns: vec![Pattern { rows: vec![vec![fade_in]] }], order: vec![0], restart_position: 0, initial_tempo_bpm: 125, initial_speed_ticks: 6, linear_frequency_table: false,
     };
 
     let dir = tempfile::tempdir().unwrap();
@@ -367,7 +367,7 @@ fn test_a_panning_envelope_nudges_set_panning_instead_of_overriding_it() {
     let hard_left = Cell { sample_index: Some(1), midi_note: Some(60), volume: Some(64), effect: Some(0x8), effect_param: Some(0), ..Default::default() };
     let module = Module {
         title: "t".to_string(), source_format: "fasttracker2".to_string(), num_channels: 1, samples: vec![enveloped],
-        patterns: vec![Pattern { rows: vec![vec![hard_left]] }], order: vec![0], restart_position: 0, initial_tempo_bpm: 125, initial_speed_ticks: 6,
+        patterns: vec![Pattern { rows: vec![vec![hard_left]] }], order: vec![0], restart_position: 0, initial_tempo_bpm: 125, initial_speed_ticks: 6, linear_frequency_table: false,
     };
 
     let dir = tempfile::tempdir().unwrap();
@@ -398,7 +398,7 @@ fn test_a_quiet_note_without_any_volume_effect_still_plays_quiet() {
     let module = Module {
         title: "t".to_string(), source_format: "protracker".to_string(), num_channels: 1, samples: vec![looped],
         patterns: vec![Pattern { rows: vec![vec![quiet_note]] }], order: vec![0], restart_position: 0,
-        initial_tempo_bpm: 125, initial_speed_ticks: 6,
+        initial_tempo_bpm: 125, initial_speed_ticks: 6, linear_frequency_table: false,
     };
     let dir = tempfile::tempdir().unwrap();
     let output = dir.path().join("out.als");
@@ -438,7 +438,7 @@ fn test_tempo_automation_steps_instead_of_ramping() {
     rows.extend(vec![Cell::default(); 7].into_iter().map(|c| vec![c]));
     let module = Module {
         title: "t".to_string(), source_format: "protracker".to_string(), num_channels: 1, samples: vec![sample],
-        patterns: vec![Pattern { rows }], order: vec![0], restart_position: 0, initial_tempo_bpm: 125, initial_speed_ticks: 6,
+        patterns: vec![Pattern { rows }], order: vec![0], restart_position: 0, initial_tempo_bpm: 125, initial_speed_ticks: 6, linear_frequency_table: false,
     };
     let dir = tempfile::tempdir().unwrap();
     let output = dir.path().join("out.als");
@@ -483,7 +483,7 @@ fn test_patterns_split_into_separate_arrangement_clips() {
     let pattern1 = Pattern { rows: vec![vec![Cell::default()], vec![note_b], vec![Cell::default()], vec![Cell::default()]] };
     let module = Module {
         title: "t".to_string(), source_format: "protracker".to_string(), num_channels: 1, samples: vec![looped],
-        patterns: vec![pattern0, pattern1], order: vec![0, 1], restart_position: 0, initial_tempo_bpm: 125, initial_speed_ticks: 6,
+        patterns: vec![pattern0, pattern1], order: vec![0, 1], restart_position: 0, initial_tempo_bpm: 125, initial_speed_ticks: 6, linear_frequency_table: false,
     };
     let dir = tempfile::tempdir().unwrap();
     let output = dir.path().join("out.als");
@@ -528,7 +528,7 @@ fn test_set_volume_and_panning_step_instead_of_ramping() {
     rows.push(vec![set_pan]);
     let module = Module {
         title: "t".to_string(), source_format: "protracker".to_string(), num_channels: 1, samples: vec![looped],
-        patterns: vec![Pattern { rows }], order: vec![0], restart_position: 0, initial_tempo_bpm: 125, initial_speed_ticks: 6,
+        patterns: vec![Pattern { rows }], order: vec![0], restart_position: 0, initial_tempo_bpm: 125, initial_speed_ticks: 6, linear_frequency_table: false,
     };
     let dir = tempfile::tempdir().unwrap();
     let output = dir.path().join("out.als");
@@ -568,7 +568,7 @@ fn test_volume_slide_glides_smoothly_without_a_step_between_ticks() {
     let module = Module {
         title: "t".to_string(), source_format: "protracker".to_string(), num_channels: 1, samples: vec![looped],
         patterns: vec![Pattern { rows: vec![vec![note_on], vec![slide_down]] }], order: vec![0], restart_position: 0,
-        initial_tempo_bpm: 125, initial_speed_ticks: 6,
+        initial_tempo_bpm: 125, initial_speed_ticks: 6, linear_frequency_table: false,
     };
     let dir = tempfile::tempdir().unwrap();
     let output = dir.path().join("out.als");
@@ -666,7 +666,7 @@ fn overlapping_sample_module() -> Module {
     Module {
         title: "t".to_string(), source_format: "protracker".to_string(), num_channels: 2, samples: vec![looped],
         patterns: vec![Pattern { rows: vec![row] }], order: vec![0], restart_position: 0,
-        initial_tempo_bpm: 125, initial_speed_ticks: 6,
+        initial_tempo_bpm: 125, initial_speed_ticks: 6, linear_frequency_table: false,
     }
 }
 
@@ -777,7 +777,7 @@ fn test_a_single_voice_sample_is_not_grouped() {
     let module = Module {
         title: "t".to_string(), source_format: "protracker".to_string(), num_channels: 1, samples: vec![looped],
         patterns: vec![Pattern { rows: vec![vec![note_on]] }], order: vec![0], restart_position: 0,
-        initial_tempo_bpm: 125, initial_speed_ticks: 6,
+        initial_tempo_bpm: 125, initial_speed_ticks: 6, linear_frequency_table: false,
     };
     let dir = tempfile::tempdir().unwrap();
     let output = dir.path().join("out.als");
@@ -804,7 +804,7 @@ fn test_sample_offset_sets_the_tracks_own_sample_start() {
     let module = Module {
         title: "t".to_string(), source_format: "protracker".to_string(), num_channels: 1, samples: vec![long_sample],
         patterns: vec![Pattern { rows: vec![vec![offset_note]] }], order: vec![0], restart_position: 0,
-        initial_tempo_bpm: 125, initial_speed_ticks: 6,
+        initial_tempo_bpm: 125, initial_speed_ticks: 6, linear_frequency_table: false,
     };
     let dir = tempfile::tempdir().unwrap();
     let output = dir.path().join("out.als");
@@ -833,7 +833,7 @@ fn amiga_panning_module() -> Module {
     Module {
         title: "t".to_string(), source_format: "protracker".to_string(), num_channels: 4, samples: vec![looped],
         patterns: vec![Pattern { rows }], order: vec![0], restart_position: 0,
-        initial_tempo_bpm: 125, initial_speed_ticks: 6,
+        initial_tempo_bpm: 125, initial_speed_ticks: 6, linear_frequency_table: false,
     }
 }
 
@@ -909,7 +909,7 @@ fn module_with_looped_sample(loop_start: u32, loop_length: u32, total_frames: u3
     Module {
         title: "t".to_string(), source_format: "protracker".to_string(), num_channels: 1, samples: vec![sample],
         patterns: vec![Pattern { rows: vec![vec![note_on]] }], order: vec![0], restart_position: 0,
-        initial_tempo_bpm: 125, initial_speed_ticks: 6,
+        initial_tempo_bpm: 125, initial_speed_ticks: 6, linear_frequency_table: false,
     }
 }
 

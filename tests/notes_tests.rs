@@ -5,7 +5,7 @@ fn module(patterns: Vec<Pattern>, num_channels: usize, samples: Vec<Sample>, spe
     let n = patterns.len();
     Module {
         title: "t".to_string(), source_format: "protracker".to_string(), num_channels, samples, patterns,
-        order: (0..n as u32).collect(), restart_position: 0, initial_tempo_bpm: bpm, initial_speed_ticks: speed,
+        order: (0..n as u32).collect(), restart_position: 0, initial_tempo_bpm: bpm, initial_speed_ticks: speed, linear_frequency_table: false,
     }
 }
 
@@ -1148,5 +1148,43 @@ fn test_a_second_key_off_on_an_already_released_note_does_not_duplicate_the_rele
     let row_beats = 6.0 / 24.0;
     assert_eq!(notes[0].release_beat, Some(row_beats)); // the *first* key off, not the second
     assert_eq!(notes[0].envelope_volumes.len(), 2); // attack point + exactly one release point
+}
+
+#[test]
+fn test_portamento_up_uses_linear_semitone_steps_under_the_xm_linear_frequency_table() {
+    // Regression test for a real bug report: Portamento Up on an XM file (which nearly always
+    // declares the linear frequency table) reached an absurd, rapidly-accelerating pitch over
+    // just a few rows when this reused MOD's own *logarithmic* Amiga-period math unconditionally
+    // — a fixed period delta corresponds to an ever-larger semitone jump as an exponential
+    // period shrinks, so the climb runs away instead of staying steady. Real XM playback is
+    // linear instead: a constant param produces a constant semitones/tick rate throughout.
+    //
+    // The exact expected rate (1.75 semitones/tick for param=0x1C=28, i.e. param*4/64) isn't a
+    // guess — it's the rate actually measured from a synthetic XM file rendered through
+    // libopenmpt (`openmpt123 --render`) and analyzed via FFT: a rock-steady 1.75 semitones per
+    // tick from the very first tick onward (see notes.rs's own LINEAR_PERIOD_UNITS_PER_SEMITONE
+    // doc comment for the full methodology).
+    let looped = Sample {
+        index: 1, name: "pad".to_string(), pcm16: vec![0u8; 100], sample_rate_hz: 44100,
+        loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60, pan: 0.0, volume_envelope: None, panning_envelope: None, fadeout: 0,
+    };
+    let note_on = note(1, 60, 64);
+    let slide = effect(0x1, 0x1C); // portamento up, param 28
+    let empty = cell();
+    let pattern = Pattern { rows: vec![vec![note_on], vec![slide], vec![empty]] };
+    let m = Module { linear_frequency_table: true, source_format: "fasttracker2".to_string(), ..module_default(vec![pattern], 1, vec![looped]) };
+
+    let song = compute_song_events(&m);
+    let notes = &song.notes_by_sample[&1];
+
+    assert_eq!(notes.len(), 1);
+    let bends = &notes[0].bends;
+    assert_eq!(bends.len(), 5); // speed=6 -> ticks 1..5
+
+    let semitones_per_tick = 0x1C as f64 * 4.0 / 64.0; // == 1.75, matches the real-playback measurement
+    for (i, bend) in bends.iter().enumerate() {
+        let expected = semitones_per_tick * (i + 1) as f64;
+        assert!((bend.semitones - expected).abs() < 1e-9, "tick {i}: got {}, expected {expected}", bend.semitones);
+    }
 }
 

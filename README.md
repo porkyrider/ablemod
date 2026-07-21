@@ -109,12 +109,34 @@ Full pipeline: `list`, `extract-samples`, `extract-midi`, `convert-als`. Handles
 ### FastTracker 2 `.xm` — done
 Full pipeline: `list`, `extract-samples`, `extract-midi`, `convert-als` (`formats::fasttracker2`). Reuses `.mod`'s own effect dispatch unchanged for the shared 0x0-0xF set (identical semantics in both formats) plus Key Off (`Kxx`/note 97, translated into note-off tracking); XM's own volume column is folded into the same single effect slot the IR provides, promoting it to the equivalent already-implemented effect (Set Volume/Slide/Panning/Vibrato/Tone Portamento) whenever the row's real effect column is free, and dropped (silently, like any other unimplemented effect) on the rare row where both are used at once. XM's instrument→keymap→sample indirection is resolved at parse time: every `(instrument, note)` pair actually reachable in the song is traced to its concrete raw sample, so a multisample/keyzone-split instrument correctly becomes several separate Sampler tracks rather than just its first sample played at every pitch. Instrument volume/panning envelopes are translated into real Ableton automation (attack shape emitted at note-on, release shape at Key Off, freezing at the envelope's sustain point in between) — the same track-level automation mechanism already used for Volume Slide/Portamento/Vibrato. Per-sample panning (XM's own instrument default-pan byte) is a real per-track Panorama baseline, not the MOD-only synthetic Amiga L/R/R/L faking. Convention: XM note 49 ("C-4" in FT2's own display) = MIDI note 60, same physical pitch `.mod`'s own period-428 anchor uses; per-sample finetune/relative-note is folded into `sample_rate_hz`, same division of labor as `.mod`.
 
+Portamento Up/Down/Tone Portamento/Vibrato/Arpeggio all respect `Module.linear_frequency_table`
+(XM's own header flag), picking between the classic Amiga logarithmic period math ProTracker
+uses and XM's own linear one (a fixed 64 period-units/semitone) — sharing one `channel_period`
+value per channel the way real hardware does, so every pitch effect on a note has to agree on
+which domain it's in. Portamento Up/Down's own linear-mode scale (param × 4⁄64 semitones/tick)
+was verified against real playback, not derived from documentation alone: rendering a synthetic
+test file through `libopenmpt` (`openmpt123 --render`) and measuring the actual resulting pitch
+curve via FFT showed a rock-steady rate exactly matching that formula. Tone Portamento/Vibrato/
+Fine Portamento's own per-tick *scale* constants (already calibrated against Amiga-mode MOD
+files) were carried over unchanged rather than independently re-verified for linear mode — only
+their conversion math was updated, which is required regardless (see `export::notes`'s own doc
+comment on `LINEAR_PERIOD_UNITS_PER_SEMITONE`) but isn't a claim that those three read exactly
+right on a linear-mode XM file yet.
+
 **Known limitations**, all deliberate scope cuts rather than bugs:
-- Only the linear frequency table is simulated — a module declaring the (rare, non-linear) Amiga frequency table still gets the linear-formula pitch math.
+- Only two frequency tables are simulated (linear and classic Amiga) — real napkin math, not a
+  third XM-specific curve; a module declaring the Amiga table gets the exact same period model
+  ProTracker `.mod` files already use.
 - Ping-pong sample loops are folded into plain forward loops.
-- Envelope loop points (`Lxx`/loop-flagged envelopes) aren't simulated — an envelope plays its authored points once and freezes at the sustain point, never re-looping a middle segment.
+- Envelope loop points (`Lxx`/loop-flagged envelopes) aren't simulated — an envelope plays its
+  authored points once and freezes at the sustain point, never re-looping a middle segment.
 - Volume fadeout isn't applied.
-- Extended effects `G`/`H`/`L`/`P`/`R`/`T`/`X` (global volume, envelope position, panning slide, multi-retrig, tremor, extra-fine portamento) are parsed but not simulated — `--verbose`/`list` reports their occurrence counts like any other unimplemented effect.
+- Extended effects `G`/`H`/`L`/`P`/`R`/`T`/`X` (global volume, envelope position, panning slide,
+  multi-retrig, tremor, extra-fine portamento) are parsed but not simulated — `--verbose`/`list`
+  reports their occurrence counts like any other unimplemented effect.
+- Tone Portamento/Vibrato/Fine Portamento's own per-tick scale under the linear frequency table
+  is carried over from Amiga-mode calibration, not independently verified (see above) — if one
+  of these three reads as off on a real linear-mode XM file, that's the first thing to check.
 
 ### ScreamTracker `.s3m` — not started
 Recognized by extension, `detect_format` returns a clean "not implemented yet" error rather than misparsing. No parser exists (`formats::` has no `screamtracker.rs`). The tracker-side IR (`formats::base::Module`) was designed to let a new parser plug straight into the existing WAV/MIDI/.als export — that part shouldn't need to change, per FastTracker 2's own parser landing this way.
@@ -187,7 +209,7 @@ trusting either.
 
 ## Testing
 
-`cargo test` — 155 tests as of this writing, all synthetic/hand-built VGM/MOD/XM byte streams plus a couple of small real fixtures (no copyrighted game audio in the repo; a `fichiers/` directory of real rips used for manual verification is gitignored). `tests/chips_tests.rs` checks each of the five original chip cores against its own register-frequency formula via autocorrelation (no real hardware to compare against) — this is what caught both real libvgm bugs listed above. The ten chips added afterward are checked more lightly in `tests/vgm_tests.rs` (header-clock/presence detection for all ten, plus a synthetic non-silence check for YM2612/GameBoy DMG/NES APU specifically) rather than a full frequency-formula proof per chip. Several bugs in this project's history were only caught by converting a real file and listening — `cargo test` passing is necessary, not sufficient, evidence of correctness for the chiptune paths above.
+`cargo test` — 158 tests as of this writing, all synthetic/hand-built VGM/MOD/XM byte streams plus a couple of small real fixtures (no copyrighted game audio in the repo; a `fichiers/` directory of real rips used for manual verification is gitignored). `tests/chips_tests.rs` checks each of the five original chip cores against its own register-frequency formula via autocorrelation (no real hardware to compare against) — this is what caught both real libvgm bugs listed above. The ten chips added afterward are checked more lightly in `tests/vgm_tests.rs` (header-clock/presence detection for all ten, plus a synthetic non-silence check for YM2612/GameBoy DMG/NES APU specifically) rather than a full frequency-formula proof per chip. Several bugs in this project's history were only caught by converting a real file and listening — `cargo test` passing is necessary, not sufficient, evidence of correctness for the chiptune paths above.
 
 ## Licensing
 
