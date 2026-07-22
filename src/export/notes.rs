@@ -21,7 +21,7 @@
 
 use std::collections::BTreeMap;
 
-use crate::formats::base::{Cell, Envelope, Module, Sample};
+use crate::formats::base::{Cell, Envelope, EnvelopePoint, Module, Sample};
 use crate::formats::playback::iter_song_rows;
 
 pub const BEATS_PER_ROW: f64 = 6.0 / 24.0; // a row is always a 16th note (4 rows/beat), independent of Speed
@@ -273,6 +273,32 @@ fn envelope_pan_to_normalized(value: u32) -> f64 {
     ((value as f64 - 32.0) / 32.0).clamp(-1.0, 1.0)
 }
 
+/// The envelope's own value at an arbitrary tick, linearly interpolated (in raw 0-64 tracker
+/// units, matching a real tracker's own per-tick envelope stepping) between the two defined
+/// points bracketing it — holding flat before the first point and after the last, same
+/// convention as export::als::interpolate_flat.
+fn envelope_value_at_tick(points: &[EnvelopePoint], tick: u32) -> u32 {
+    let first = points.first().unwrap();
+    if tick <= first.tick {
+        return first.value;
+    }
+    let last = points.last().unwrap();
+    if tick >= last.tick {
+        return last.value;
+    }
+    for w in points.windows(2) {
+        let (a, b) = (&w[0], &w[1]);
+        if tick >= a.tick && tick <= b.tick {
+            if b.tick <= a.tick {
+                return a.value;
+            }
+            let t = (tick - a.tick) as f64 / (b.tick - a.tick) as f64;
+            return (a.value as f64 + t * (b.value as f64 - a.value as f64)).round() as u32;
+        }
+    }
+    last.value
+}
+
 /// The "attack" (pre-release) portion of an envelope, emitted once at note-trigger time using
 /// the tick rate in effect *then* — a deliberate simplification (a Speed/BPM change partway
 /// through a long, not-yet-sustained envelope ramp isn't reflected), documented in this
@@ -281,19 +307,35 @@ fn envelope_pan_to_normalized(value: u32) -> f64 {
 /// automation needed, exactly matching a tracker's own "envelope freezes at the sustain point
 /// while the note is held" behavior. Without a sustain point the whole envelope is emitted
 /// unconditionally (it isn't gated on note-off at all).
+///
+/// One point per *tick* is emitted (not just the envelope's own sparse defined breakpoints) —
+/// Ableton's own automation playback doesn't interpolate linearly in the stored gain value
+/// between two widely-spaced points the way its XML/editor representation implies (confirmed by
+/// comparing a real Ableton bounce against an independent reference player and a from-scratch
+/// gain-domain calculation: the bounced audio decayed considerably faster than a straight line
+/// between the two endpoint gains would produce). Emitting the correctly-interpolated value at
+/// every tick, matching how a Volume Slide's own per-tick points already work, keeps each gap
+/// between consecutive automation points small enough that whatever curve Ableton actually
+/// applies between them is indistinguishable from the tracker's own linear-per-tick ramp.
 fn envelope_attack_points(env: &Envelope, start_beat: f64, beats_per_tick: f64) -> Vec<(f64, u32)> {
     let end = env.sustain_point.map_or(env.points.len(), |i| i + 1);
-    env.points[..end].iter().map(|p| (start_beat + p.tick as f64 * beats_per_tick, p.value)).collect()
+    let relevant = &env.points[..end];
+    let first_tick = relevant.first().unwrap().tick;
+    let last_tick = relevant.last().unwrap().tick;
+    (first_tick..=last_tick).map(|tick| (start_beat + tick as f64 * beats_per_tick, envelope_value_at_tick(relevant, tick))).collect()
 }
 
 /// The release portion of an envelope (the points *after* the sustain point), anchored at
 /// `release_beat` and using the tick rate in effect *then* (not at trigger time — see
 /// envelope_attack_points). Empty if the envelope has no sustain point, since in that case
-/// everything was already emitted at trigger.
+/// everything was already emitted at trigger. Densified to one point per tick, same reason as
+/// envelope_attack_points.
 fn envelope_release_points(env: &Envelope, release_beat: f64, beats_per_tick: f64) -> Vec<(f64, u32)> {
     let Some(sustain) = env.sustain_point else { return Vec::new() };
-    let sustain_tick = env.points[sustain].tick as f64;
-    env.points[sustain + 1..].iter().map(|p| (release_beat + (p.tick as f64 - sustain_tick) * beats_per_tick, p.value)).collect()
+    let relevant = &env.points[sustain..];
+    let sustain_tick = relevant.first().unwrap().tick;
+    let last_tick = relevant.last().unwrap().tick;
+    ((sustain_tick + 1)..=last_tick).map(|tick| (release_beat + (tick - sustain_tick) as f64 * beats_per_tick, envelope_value_at_tick(relevant, tick))).collect()
 }
 
 /// Triggers a new note on `ch`, closing whatever was previously held there — the shared core

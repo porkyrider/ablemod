@@ -1078,7 +1078,17 @@ fn test_volume_envelope_attack_points_are_emitted_at_trigger_and_freeze_at_the_s
 
     let tick_beats = (6.0 / 24.0) / 6.0; // speed=6
     let volumes: Vec<(f64, i32, bool)> = notes[0].envelope_volumes.iter().map(|v| (v.at_beat, v.tracker_volume, v.glide)).collect();
-    assert_eq!(volumes, vec![(0.0, 64, false), (5.0 * tick_beats, 32, true)]);
+    // One point per *tick* from 0 to the sustain point (not just the two defined breakpoints) —
+    // Ableton's own automation playback doesn't interpolate linearly in the stored gain value
+    // between widely-spaced points (see envelope_attack_points's own doc comment), so the raw
+    // 0-64 envelope value is linearly interpolated here, per tick, instead.
+    let expected: Vec<(f64, i32, bool)> = (0..=5)
+        .map(|tick| {
+            let value = (64.0 + tick as f64 / 5.0 * (32.0 - 64.0)).round() as i32;
+            (tick as f64 * tick_beats, value, tick != 0)
+        })
+        .collect();
+    assert_eq!(volumes, expected);
 }
 
 #[test]
@@ -1122,12 +1132,22 @@ fn test_key_off_triggers_the_envelopes_release_segment_at_the_current_tick_rate(
     let tick_beats = row_beats / 6.0;
     let release_beat = row_beats; // key off is on row 1
     let volumes: Vec<(f64, i32, bool)> = notes[0].envelope_volumes.iter().map(|v| (v.at_beat, v.tracker_volume, v.glide)).collect();
-    // attack up to and including the sustain point, then the release tail anchored at the key
-    // off beat (offset from the sustain point's own tick, i.e. (15-5)=10 ticks later).
-    assert_eq!(
-        volumes,
-        vec![(0.0, 64, false), (5.0 * tick_beats, 32, true), (release_beat + 10.0 * tick_beats, 0, true)]
-    );
+    // Attack: one point per tick from 0 to the sustain point (tick 5). Release: one point per
+    // tick from the sustain point to the release-only tail's tick (15), anchored at the key off
+    // beat and offset from the sustain point's own tick — see envelope_attack_points's doc
+    // comment for why this is densified to one point per tick rather than just the two defined
+    // breakpoints at each end.
+    let mut expected: Vec<(f64, i32, bool)> = (0..=5)
+        .map(|tick| {
+            let value = (64.0 + tick as f64 / 5.0 * (32.0 - 64.0)).round() as i32;
+            (tick as f64 * tick_beats, value, tick != 0)
+        })
+        .collect();
+    expected.extend((6..=15).map(|tick| {
+        let value = (32.0 + (tick - 5) as f64 / 10.0 * (0.0 - 32.0)).round() as i32;
+        (release_beat + (tick - 5) as f64 * tick_beats, value, true)
+    }));
+    assert_eq!(volumes, expected);
 }
 
 #[test]
@@ -1147,7 +1167,9 @@ fn test_a_second_key_off_on_an_already_released_note_does_not_duplicate_the_rele
 
     let row_beats = 6.0 / 24.0;
     assert_eq!(notes[0].release_beat, Some(row_beats)); // the *first* key off, not the second
-    assert_eq!(notes[0].envelope_volumes.len(), 2); // attack point + exactly one release point
+    // 1 attack point (sustain is tick 0, immediately) + one release point per tick from 1 to 10
+    // (not duplicated by the second key off).
+    assert_eq!(notes[0].envelope_volumes.len(), 1 + 10);
 }
 
 #[test]
