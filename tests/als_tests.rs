@@ -392,6 +392,74 @@ fn test_a_panning_envelope_nudges_set_panning_instead_of_overriding_it() {
 }
 
 #[test]
+fn test_a_note_retriggered_before_its_envelope_finishes_clips_instead_of_leaking_into_later_notes() {
+    // Regression test: a fast retrigger (e.g. a hi-hat) whose instrument envelope takes longer
+    // to decay than the gap between retriggers used to leak its own leftover, uncut ramp into
+    // later notes' automation once every note's points were pooled and sorted by beat together
+    // (see clip_envelope_to_duration's own doc comment in als.rs) — a stale "ramping toward 0"
+    // point from an already-superseded note would land in the *middle* of a much later note's
+    // own window, producing a sudden plunge to near-silence far steeper than the envelope
+    // itself ever specifies. Real tracker hardware just cuts the voice mid-ramp on retrigger,
+    // holding whatever partial value it had reached — it never lets the rest of that ramp keep
+    // gliding on its own past the retrigger.
+    //
+    // Envelope: (0, 64) -> (18, 0), no sustain — an 18-tick (4.5-beat) decay. Speed 1 (1
+    // tick/row) makes 4 rows == 1 beat, so a retrigger every 4 rows cuts the note after just 1
+    // beat/4 ticks — a fifth of the way through the ramp — every single time. 6 retriggers (rows
+    // 0, 4, 8, 12, 16, 20) put note 0's own *uncut* envelope endpoint (its trigger beat + 4.5)
+    // at beat 4.5, squarely inside note 4's own window (beats 4.0-5.0) rather than coinciding
+    // with any other note's own beat — exactly the kind of stale point that used to leak in.
+    let env = ablemod::formats::base::Envelope {
+        points: vec![ablemod::formats::base::EnvelopePoint { tick: 0, value: 64 }, ablemod::formats::base::EnvelopePoint { tick: 18, value: 0 }],
+        sustain_point: None,
+        loop_start_point: None,
+        loop_end_point: None,
+    };
+    let enveloped = Sample {
+        index: 1, name: "hat".to_string(), pcm16: vec![0u8; 100], sample_rate_hz: 44100, loop_start: 0, loop_length: 2,
+        volume: 64, finetune: 0, base_note: 60, pan: 0.0, volume_envelope: Some(env), panning_envelope: None, fadeout: 0,
+    };
+    let trigger = Cell { sample_index: Some(1), midi_note: Some(60), ..Default::default() };
+    let mut rows = vec![vec![Cell::default()]; 24];
+    for row in [0usize, 4, 8, 12, 16, 20] {
+        rows[row] = vec![trigger.clone()];
+    }
+    let module = Module {
+        title: "t".to_string(), source_format: "fasttracker2".to_string(), num_channels: 1, samples: vec![enveloped],
+        patterns: vec![Pattern { rows }], order: vec![0], restart_position: 0, initial_tempo_bpm: 125, initial_speed_ticks: 1, linear_frequency_table: false,
+    };
+
+    let dir = tempfile::tempdir().unwrap();
+    let output = dir.path().join("out.als");
+    export_als(&module, &output, default_template_bytes(), AmigaPanning::None).unwrap();
+
+    let root = read_als(&output);
+    let track = xmlutil::find(&root, ".//MidiTrack").unwrap();
+    let volume_target = attr(xmlutil::find(track, "./DeviceChain/Mixer/Volume/AutomationTarget").unwrap(), "Id");
+    let envelopes_el = xmlutil::find(track, "./AutomationEnvelopes/Envelopes").unwrap();
+    let volume_env = xmlutil::find_all_children(envelopes_el, "AutomationEnvelope")
+        .into_iter()
+        .find(|e| attr(xmlutil::find(e, "./EnvelopeTarget/PointeeId").unwrap(), "Value") == volume_target)
+        .unwrap();
+
+    // Beat 4.5 is inside note 4's own window (beats 4.0-5.0) — the old bug placed note 0's
+    // stale zero-point there. The correct, clipped value at beat 4.5 (a fifth of the way
+    // through note 4's own copy of the same ramp: (4.0, 64) clipped against the ramp reaching
+    // 0 at 8.5) is still a healthy ~49-50, nowhere near the near-silent floor.
+    let silent_gain = volume_to_gain(0);
+    for e in xmlutil::find_all_descendants(&volume_env, "FloatEvent") {
+        let time: f64 = attr(e, "Time").parse().unwrap();
+        let value: f64 = attr(e, "Value").parse().unwrap();
+        if (4.0..5.0).contains(&time) {
+            assert!(
+                value > silent_gain * 10.0,
+                "beat {time} (inside note 4's own window) dropped to {value} — looks like note 0's stale, uncut envelope tail leaked in"
+            );
+        }
+    }
+}
+
+#[test]
 fn test_a_quiet_note_without_any_volume_effect_still_plays_quiet() {
     let looped = Sample { index: 1, name: "pad".to_string(), pcm16: vec![0u8; 100], sample_rate_hz: 44100, loop_start: 0, loop_length: 2, volume: 64, finetune: 0, base_note: 60, pan: 0.0, volume_envelope: None, panning_envelope: None, fadeout: 0 };
     let quiet_note = Cell { sample_index: Some(1), midi_note: Some(60), volume: Some(16), ..Default::default() }; // 25% of max tracker volume, no effect

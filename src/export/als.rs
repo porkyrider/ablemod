@@ -375,6 +375,30 @@ fn collapse_duplicate_beats(points: &[(f64, f64, bool)]) -> Vec<(f64, f64, bool)
     out
 }
 
+/// Clips an envelope's own point list to a note's actual duration, dropping anything at or
+/// past `cutoff_beat` and replacing it with a single point *at* the cutoff holding whatever
+/// value the ramp had reached there. `envelope_attack_points`/`envelope_release_points` (see
+/// export::notes) compute an envelope's points from its own tick data alone, at trigger time,
+/// with no idea yet how long the note will actually last — a fast retrigger (e.g. a hi-hat
+/// retriggered every beat with a multi-beat decay envelope) can and does cut a note well before
+/// its envelope finishes. Real tracker hardware cuts the voice there, mid-ramp; it doesn't let
+/// the rest of that ramp keep gliding on its own. Without this clip, those leftover points
+/// survive into the point list `collect_volume_points`/`collect_pan_points` hand to
+/// `merge_with_envelope` and, once every note's points are pooled and sorted by beat together,
+/// land in the *middle of later notes'* own territory — producing a much steeper, more abrupt
+/// drop than the envelope itself ever specifies. A no-op whenever the envelope already finishes
+/// at or before the cutoff (the common case).
+fn clip_envelope_to_duration(points: &[(f64, f64, bool)], cutoff_beat: f64) -> Vec<(f64, f64, bool)> {
+    if points.iter().all(|p| p.0 <= cutoff_beat) {
+        return points.to_vec();
+    }
+    let flat: Vec<(f64, f64)> = points.iter().map(|p| (p.0, p.1)).collect();
+    let value_at_cutoff = interpolate_flat(&flat, cutoff_beat);
+    let mut clipped: Vec<(f64, f64, bool)> = points.iter().filter(|p| p.0 < cutoff_beat).copied().collect();
+    clipped.push((cutoff_beat, value_at_cutoff, true));
+    clipped
+}
+
 fn merge_with_envelope(channel: &[(f64, f64, bool)], envelope: &[(f64, f64, bool)], combine: impl Fn(f64, f64) -> f64) -> Vec<(f64, f64, bool)> {
     if envelope.is_empty() {
         return channel.to_vec();
@@ -423,6 +447,7 @@ fn collect_volume_points(notes: &[NoteEvent]) -> Vec<(f64, f64, bool)> {
         channel_points.push((note.start_beat + note.duration_beat, baseline, false));
 
         let envelope_points: Vec<(f64, f64, bool)> = note.envelope_volumes.iter().map(|v| (v.at_beat, v.tracker_volume as f64, v.glide)).collect();
+        let envelope_points = clip_envelope_to_duration(&envelope_points, note.start_beat + note.duration_beat);
         let combined = merge_with_envelope(&channel_points, &envelope_points, |chan, env| chan * (env / 64.0));
         points.extend(combined.into_iter().map(|(beat, tracker_volume, glide)| (beat, volume_to_gain(tracker_volume.round() as i32), glide)));
     }
@@ -458,6 +483,7 @@ fn collect_pan_points(notes: &[NoteEvent], amiga_panning: AmigaPanning, sample_p
         channel_points.push((note.start_beat + note.duration_beat, baseline, false));
 
         let envelope_points: Vec<(f64, f64, bool)> = note.envelope_pans.iter().map(|p| (p.at_beat, p.pan, p.glide)).collect();
+        let envelope_points = clip_envelope_to_duration(&envelope_points, note.start_beat + note.duration_beat);
         let combined = merge_with_envelope(&channel_points, &envelope_points, |chan, env| (chan + env).clamp(-1.0, 1.0));
         points.extend(combined);
     }
