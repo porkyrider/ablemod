@@ -1,6 +1,6 @@
 [package]
 name = "ablemod"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 description = "Convert ProTracker modules and VGM/VGZ chiptune rips to Ableton Live projects"
 # GPL-2.0-or-later, not this project's own historical preference — forced by vendoring
